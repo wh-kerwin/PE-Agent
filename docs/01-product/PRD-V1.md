@@ -70,7 +70,7 @@ reviewStatus 独立取 NOT_REVIEWED / CONFIRMED / CORRECTED / INCONCLUSIVE。原
 
 V1 单 Agent、受限动态规划、只读 Tool Registry、证据校验、结构化输出。模型负责理解、选择调查步骤和总结；运行时负责权限、调度、预算、Schema 校验、证据引用、持久化与审计。
 
-「typeSafe Jev」作为用户指定候选，准确名称、厂商、接口和能力待验证。采用 [Model Adapter](../02-architecture/model-integration.md) 隔离协议，未验证前不假设 OpenAI 兼容、原生 Tool Calling、JSON Schema 输出或私有化部署。
+TypeSafe Jev 是 System One 决策模型，接收 state 与 typed questions，返回 Choice / Score / Noul；它不负责直接生成完整长报告或调用制造工具。采用 [Jev 集成设计](../02-architecture/model-integration.md)：Runtime 取数并控制工作流，Jev 评估原子问题，代码校验引用并组装报告。自然语言解释可使用确定性模板，未来如引入生成式模型需独立评估。
 
 ## 8. 性能、质量与验收
 

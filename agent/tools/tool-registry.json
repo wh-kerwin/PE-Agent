@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0.0",
+  "registryVersion": "yield-drop-tools-v1.0.0",
+  "defaultTimeoutMs": 8000,
+  "tools": [
+    {
+      "toolId": "get_case_context",
+      "capability": "READ",
+      "requiredPermission": "case.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "caseId",
+        "caseVersion"
+      ]
+    },
+    {
+      "toolId": "get_lot_yield",
+      "capability": "READ",
+      "requiredPermission": "yield.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "lotId",
+        "processStep",
+        "startAt",
+        "endAt"
+      ]
+    },
+    {
+      "toolId": "get_tool_events",
+      "capability": "READ",
+      "requiredPermission": "equipment.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "toolId",
+        "startAt",
+        "endAt"
+      ]
+    },
+    {
+      "toolId": "get_recipe_snapshot",
+      "capability": "READ",
+      "requiredPermission": "recipe.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "recipeId",
+        "effectiveAt"
+      ]
+    },
+    {
+      "toolId": "get_spc_evidence",
+      "capability": "READ",
+      "requiredPermission": "spc.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "toolId",
+        "startAt",
+        "endAt"
+      ]
+    },
+    {
+      "toolId": "get_fdc_evidence",
+      "capability": "READ",
+      "requiredPermission": "fdc.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "toolId",
+        "startAt",
+        "endAt"
+      ]
+    },
+    {
+      "toolId": "search_similar_cases",
+      "capability": "READ",
+      "requiredPermission": "casebook.read",
+      "maxAttempts": 2,
+      "inputRequired": [
+        "caseType",
+        "processStep",
+        "limit"
+      ]
+    }
+  ]
+}

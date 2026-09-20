@@ -47,7 +47,7 @@ sequenceDiagram
 V1：Yield Drop、单 Agent、只读工具、可恢复 SSE、结构化报告、工程师复核和 Case Book 归档。
 V2：[多类型 Case 与交互调查](docs/01-product/PRD-V2.md)。V3：[审批后受控动作](docs/01-product/PRD-V3.md)。后两者是路线图。
 
-用户提及的「typeSafe Jev」目前未核实厂商、模型标识和协议；以候选模型适配器设计，不声称已接入。
+TypeSafe Jev 已按官方文档纳入设计：它用于 Choice / Score / Noul 原子判断，由代码控制调查与组装报告。当前仓库仍未配置 API Key 或实现适配器，不声称已经接入运行环境。
 
 ## 本地资料校验
 

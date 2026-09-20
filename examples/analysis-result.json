@@ -1,17 +1,289 @@
 {
+  "schemaVersion": "1.0.0",
+  "reportId": "RPT-ANA-001-V1",
+  "taskId": "ANA-20260920-001",
+  "reportVersion": 1,
+  "caseSnapshot": {
+    "caseId": "CASE-20260920-001",
+    "caseVersion": "17",
+    "caseType": "YIELD_DROP"
+  },
+  "generatedAt": "2026-09-20T01:36:12Z",
+  "model": {
+    "provider": "typesafe",
+    "requestedModel": "jev-1.13.0",
+    "resolvedModel": "jev-1.13.0",
+    "questionSetVersion": "yield-drop-jev-v1.0.0"
+  },
   "summary": {
-    "title": "Yield Drop Analysis",
-    "description": "Example structure only"
+    "title": "Yield drop on LOT001",
+    "overview": "The 14 percentage-point drop is temporally associated with chamber-pressure abnormalities on ETCH01. This remains a hypothesis pending engineering verification.",
+    "severity": "HIGH"
   },
   "impact": {
-    "affectedLots": [],
-    "affectedWafers": [],
-    "affectedTools": []
+    "yield": {
+      "observedPercent": 82.0,
+      "baselinePercent": 96.0,
+      "absoluteDropPercentagePoints": 14.0
+    },
+    "affectedLots": [
+      "LOT001"
+    ],
+    "affectedWafers": [
+      "LOT001-W03",
+      "LOT001-W04"
+    ],
+    "affectedTools": [
+      "ETCH01"
+    ]
   },
-  "timeline": [],
-  "findings": [],
-  "evidence": [],
-  "hypotheses": [],
-  "recommendations": [],
-  "uncertainties": []
+  "timeline": [
+    {
+      "eventId": "TL-01",
+      "occurredAt": "2026-09-20T01:18:00Z",
+      "title": "Pressure drift detected",
+      "evidenceIds": [
+        "EV-FDC-01"
+      ]
+    },
+    {
+      "eventId": "TL-02",
+      "occurredAt": "2026-09-20T01:23:00Z",
+      "title": "SPC control limit exceeded",
+      "evidenceIds": [
+        "EV-SPC-01"
+      ]
+    },
+    {
+      "eventId": "TL-03",
+      "occurredAt": "2026-09-20T01:31:00Z",
+      "title": "Yield result recorded",
+      "evidenceIds": [
+        "EV-YIELD-01"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "findingId": "F-01",
+      "level": "OBSERVED",
+      "title": "Yield below baseline",
+      "description": "LOT001 was 14 percentage points below the matched baseline.",
+      "evidenceIds": [
+        "EV-YIELD-01"
+      ]
+    },
+    {
+      "findingId": "F-02",
+      "level": "INFERRED",
+      "title": "Tool-specific association",
+      "description": "The affected tool showed pressure abnormalities while a matched peer remained within baseline.",
+      "evidenceIds": [
+        "EV-SPC-01",
+        "EV-FDC-01",
+        "EV-PEER-01"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "EV-YIELD-01",
+      "kind": "YIELD",
+      "observation": "LOT001 yield was 82.0% against a matched baseline of 96.0%.",
+      "source": {
+        "system": "YIELD",
+        "sourceId": "YLD-001"
+      },
+      "entityRefs": [
+        {
+          "type": "LOT",
+          "id": "LOT001"
+        }
+      ],
+      "eventTime": "2026-09-20T01:31:00Z",
+      "retrievedAt": "2026-09-20T01:36:01Z",
+      "quality": "VERIFIED",
+      "rawRef": "/api/ai/source-links/EV-YIELD-01"
+    },
+    {
+      "evidenceId": "EV-SPC-01",
+      "kind": "SPC",
+      "observation": "Chamber pressure exceeded the active upper control limit at 01:23 UTC.",
+      "source": {
+        "system": "SPC",
+        "sourceId": "SPC-889"
+      },
+      "entityRefs": [
+        {
+          "type": "TOOL",
+          "id": "ETCH01"
+        },
+        {
+          "type": "PARAMETER",
+          "id": "CHAMBER_PRESSURE"
+        }
+      ],
+      "eventTime": "2026-09-20T01:23:00Z",
+      "retrievedAt": "2026-09-20T01:36:03Z",
+      "quality": "VERIFIED",
+      "rawRef": "/api/ai/source-links/EV-SPC-01"
+    },
+    {
+      "evidenceId": "EV-FDC-01",
+      "kind": "FDC",
+      "observation": "Chamber pressure increased 8.2% from the matched run median before the yield result.",
+      "source": {
+        "system": "FDC",
+        "sourceId": "FDC-221"
+      },
+      "entityRefs": [
+        {
+          "type": "TOOL",
+          "id": "ETCH01"
+        },
+        {
+          "type": "PARAMETER",
+          "id": "CHAMBER_PRESSURE"
+        }
+      ],
+      "eventTime": "2026-09-20T01:18:00Z",
+      "retrievedAt": "2026-09-20T01:36:04Z",
+      "quality": "VERIFIED",
+      "rawRef": "/api/ai/source-links/EV-FDC-01"
+    },
+    {
+      "evidenceId": "EV-PEER-01",
+      "kind": "YIELD",
+      "observation": "A matched peer run on ETCH02 with RCP100 remained within its yield baseline.",
+      "source": {
+        "system": "YIELD",
+        "sourceId": "YLD-PEER-31"
+      },
+      "entityRefs": [
+        {
+          "type": "TOOL",
+          "id": "ETCH02"
+        },
+        {
+          "type": "RECIPE",
+          "id": "RCP100"
+        }
+      ],
+      "eventTime": "2026-09-20T00:58:00Z",
+      "retrievedAt": "2026-09-20T01:36:05Z",
+      "quality": "VERIFIED",
+      "rawRef": "/api/ai/source-links/EV-PEER-01"
+    },
+    {
+      "evidenceId": "EV-HIST-01",
+      "kind": "HISTORICAL_CASE",
+      "observation": "Resolved case CASE-20260802-014 had the same tool family and pressure-drift symptom.",
+      "source": {
+        "system": "CASE_BOOK",
+        "sourceId": "CASE-20260802-014"
+      },
+      "entityRefs": [
+        {
+          "type": "TOOL",
+          "id": "ETCH01"
+        }
+      ],
+      "eventTime": "2026-08-02T04:00:00Z",
+      "retrievedAt": "2026-09-20T01:36:06Z",
+      "quality": "VERIFIED",
+      "rawRef": "/api/ai/source-links/EV-HIST-01"
+    }
+  ],
+  "correlations": [
+    {
+      "correlationId": "C-01",
+      "type": "TEMPORAL",
+      "description": "Pressure drift and SPC violation preceded the yield result.",
+      "evidenceIds": [
+        "EV-FDC-01",
+        "EV-SPC-01",
+        "EV-YIELD-01"
+      ]
+    },
+    {
+      "correlationId": "C-02",
+      "type": "TOOL",
+      "description": "A matched peer tool did not show the same yield loss.",
+      "evidenceIds": [
+        "EV-PEER-01",
+        "EV-YIELD-01"
+      ]
+    }
+  ],
+  "hypotheses": [
+    {
+      "hypothesisId": "H-01",
+      "title": "Chamber pressure drift contributed to the yield loss",
+      "confidenceLevel": "HIGH",
+      "supportingEvidenceIds": [
+        "EV-SPC-01",
+        "EV-FDC-01",
+        "EV-PEER-01"
+      ],
+      "contradictingEvidenceIds": [],
+      "missingEvidence": [
+        "Post-calibration verification run"
+      ],
+      "modelAssessment": {
+        "questionId": "pressure_drift_support",
+        "primitive": "score",
+        "answer": 2.72,
+        "distribution": {
+          "INSUFFICIENT": 0.01,
+          "WEAK": 0.04,
+          "MIXED": 0.17,
+          "STRONG": 0.78
+        },
+        "confidence": 0.71,
+        "resolvedModel": "jev-1.13.0"
+      }
+    }
+  ],
+  "similarCases": [
+    {
+      "caseId": "CASE-20260802-014",
+      "similarityReason": "Same tool family and pressure-drift symptom; historical outcome is supporting context only.",
+      "evidenceId": "EV-HIST-01"
+    }
+  ],
+  "recommendations": [
+    {
+      "recommendationId": "REC-01",
+      "category": "INVESTIGATION",
+      "action": "Verify ETCH01 chamber pressure sensor calibration and review the matching maintenance record.",
+      "reason": "Current case-specific SPC and FDC evidence supports checking the pressure path.",
+      "evidenceIds": [
+        "EV-SPC-01",
+        "EV-FDC-01"
+      ],
+      "requiresEngineerDecision": true
+    },
+    {
+      "recommendationId": "REC-02",
+      "category": "FOLLOW_UP",
+      "action": "Compare the next authorized verification run with the same matched baseline.",
+      "reason": "A post-check run is needed before the hypothesis can be confirmed.",
+      "evidenceIds": [
+        "EV-YIELD-01",
+        "EV-PEER-01"
+      ],
+      "requiresEngineerDecision": true
+    }
+  ],
+  "uncertainties": [
+    {
+      "uncertaintyId": "U-01",
+      "description": "No post-calibration verification run is available.",
+      "impact": "The suspected pressure contribution cannot be confirmed as root cause.",
+      "relatedEvidenceIds": [
+        "EV-SPC-01",
+        "EV-FDC-01"
+      ]
+    }
+  ]
 }

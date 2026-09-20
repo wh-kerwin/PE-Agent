@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "workflowId": "yield-drop-v1",
+  "supportedCaseType": "YIELD_DROP",
+  "limits": {
+    "deadlineMs": 60000,
+    "maxToolCalls": 14,
+    "maxReplans": 2,
+    "maxParallelTools": 3
+  },
+  "phases": [
+    {
+      "id": "load_context",
+      "requiredTools": [
+        "get_case_context"
+      ]
+    },
+    {
+      "id": "collect_baseline",
+      "requiredTools": [
+        "get_lot_yield"
+      ]
+    },
+    {
+      "id": "collect_process_data",
+      "requiredTools": [
+        "get_tool_events",
+        "get_recipe_snapshot",
+        "get_spc_evidence",
+        "get_fdc_evidence"
+      ]
+    },
+    {
+      "id": "compare_and_retrieve",
+      "requiredTools": [
+        "search_similar_cases"
+      ],
+      "jevQuestion": "next_investigation_branch"
+    },
+    {
+      "id": "evaluate_hypotheses",
+      "jevQuestions": [
+        "pressure_drift_support",
+        "needs_more_evidence"
+      ]
+    },
+    {
+      "id": "compose_and_validate_report",
+      "outputSchema": "../schemas/analysis-report.schema.json"
+    }
+  ],
+  "terminalStatuses": [
+    "COMPLETED",
+    "PARTIAL_RESULT",
+    "FAILED",
+    "TIMEOUT",
+    "CANCELLED"
+  ]
+}

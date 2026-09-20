@@ -1,27 +1,57 @@
-# typeSafe Jev 候选模型接入
+# TypeSafe Jev 集成设计
 
-## 核实状态（2026-09-20）
+## 官方能力快照
 
-用户提及「最近发布的 typeSafe 的 Jev 模型」。当前没有可确认的官方链接、准确模型 ID 或 API 文档。AutoGLM 搜索因本地鉴权服务 HTTP 502 失败；直接网页搜索连接超时。这只能说明本次未能核实，不能据此判断该模型不存在。
+以下信息于 2026-09-20 根据 [TypeSafe 官方文档](https://docs.typesafe.ai/)核实：Jev 是 TypeSafe 的旗舰 **System One** 模型；输入一个文本型 `state` 和多个相互独立的 typed questions，返回可由代码使用的结构化判断。
 
-因此本项目使用内部候选标识 `jev-candidate`，不把它当成厂商正式模型名。没有宣称支持原生 Tool Calling、结构化输出、流式输出、多模态、特定上下文长度、价格或私有部署。配置默认禁用，详见 [候选配置](../../agent/model-profile.json)。
+| 项目 | 官方文档所述能力 |
+|---|---|
+| API | `POST https://api.typesafe.ai/v1/systemone`，Bearer API Key |
+| 稳定别名 | `jev-latest`；生产评估与阈值应记录响应中的实际版本 |
+| 当前版本 | 文档当前列出 `jev-1.13.0`，别名以后会移动 |
+| Choice | 从闭集选项中选择，返回选项、分布和 confidence |
+| Score | 按有序 rubric 评分，返回分数、分布和 confidence |
+| Noul | 对 yes/no 判断返回 0–1 的 yes 概率，不另含 confidence |
+| 输入 | 文本，state 可为 string、JSON object 或 text array；不支持图片/音频/视频 |
+| 语言 | 英语为主要训练语言；CJK 可用但准确率较低，必须用本项目数据评估 |
+| 限制 | 64k 总上下文，state + 最长 question 32k；限额可能动态变化 |
+| 错误 | 401、422、429、529；429/529 按 Retry-After/指数退避 |
 
-## 为什么仍能推进
+官方文档还说明请求/响应不用于训练，并提供企业 ZDR 选项；实际生产接入仍需企业法务、数据出域和合同评审。价格、速率和别名是可变外部信息，不固化为系统保证。
 
-Dashboard 点击发起的是业务任务，不直接调用 Jev。Model Adapter 将规范化消息、工具描述和输出约束转换成真实厂商协议，Agent 与 UI 的业务契约保持一致。这里的类型安全是工程侧 JSON Schema 与运行时校验，不等于对 TypeSafe 厂商能力的声明。
+## 在 PE Agent 中的角色
 
-| 适配器操作 | 输入 | 输出 |
+Jev 不生成完整报告，也不直接调用 MES/SPC/FDC。Runtime 先通过权限内工具构造有来源的 state，再向 Jev 提出窄且可评估的问题，最后由代码把判断映射为结构化报告。
+
+```mermaid
+flowchart LR
+    T[只读工具结果] --> E[Evidence Engine]
+    E --> S[最小化 Jev state]
+    S --> J[Jev Choice / Score / Noul]
+    J --> V[阈值与一致性校验]
+    V --> R[代码组装 Analysis Report]
+    V --> H[低置信 / 冲突 → 人工复核或补数]
+```
+
+适合 Jev 的判断：选择下一组调查分支、判断一条证据是否支持指定假设、对证据一致性分级、检查当前证据是否足够继续。不适合把“分析这个 Case 并写完整报告”作为一个问题，也不能把模型分数直接命名为根因概率。
+
+`state` 使用英文键名、单位化数值、稳定 ID 与必要的中英文本。问题原子化并批量发送；每个问题独立看同一 state，因此相互依赖的多步推理由代码分阶段运行。证据 ID 必须来自 Registry，Jev 不自由生成来源标识。
+
+## 推荐问题设计
+
+| 用途 | Primitive | 代码行为 |
 |---|---|---|
-| inspectCapabilities | 已核实配置 | tools、structuredOutput、streaming、limits 的已验证能力 |
-| generate | messages、可选 tools/outputSchema、budget、deadline | text/toolCalls、finishReason、usage、modelId、requestId |
-| cancel | requestId | 尽力取消；运行时仍忽略终态后的迟到结果 |
+| 当前证据是否足以支持某一明确假设 | Noul | 概率仅作为信号；结合硬规则与反证决定展示等级 |
+| 下一调查分支 | Choice | 选项来自允许工具组并含 `INSUFFICIENT_CONTEXT`；低 confidence 走固定工作流 |
+| 证据一致性 | Score | rubric 为 INSUFFICIENT/WEAK/MIXED/STRONG；代码保留完整分布 |
+| 是否存在来源不支持的断言 | Noul | 高风险时拒绝发布并人工复核 |
 
-工具调用无论原生还是经受限 JSON 计划解析，都经过工具名、参数 Schema、权限、实体范围、预算校验。无原生工具能力时可由固定工作流取数，再让模型整理证据。无原生 JSON Schema 能力时解析 JSON 后严格校验，最多一次修复；仍失败则不发布报告。无模型 token streaming 时，业务 SSE 仍可推送运行时阶段与工具事件。
+阈值必须由已确认历史 Case 的独立验证集校准，不能照搬官方示例。Jev confidence 表示分布集中程度，不证明答案正确；Noul 0.5 也不是“中等程度”。
 
-## 启用清单
+## 失败与替代路径
 
-需要记录官方资料 URL 与版本/日期、厂商/模型准确 ID、endpoint 与认证方式、数据留存/训练政策和地域、可用工具/输出能力、限额、超时/取消语义和计费口径。密钥通过服务端 Secret 注入，不提交仓库。
+对 429/529 做有上限且带 jitter 的重试，仍受任务总时限约束。401 不重试并告警；422 标记契约错误。TypeSafe 不可用时，V1 可继续运行确定性调查并返回 PARTIAL_RESULT，明确“模型判断不可用”；不静默切换到未经批准的外部模型。
 
-接入契约测试覆盖：普通生成、有效工具调用、未知工具、参数越界、非法 JSON、幻觉证据 ID、超时、429、5xx、取消、用量。使用相同黄金 Case 比较证据准确性、时延和成本，达标后启用。
+如需自然语言解释，可由模板基于已校验字段生成。未来若增加生成式模型，它是独立适配器，只负责表达，不可改变 Jev 判断、证据关系或权限。
 
-模型切换必须符合相同数据出域政策并记录版本；不能静默回退到未批准供应商。无可用模型返回 MODEL_UNAVAILABLE，mock 只能用于清楚标识的开发环境。
+实现配置见 [model-profile.json](../../agent/model-profile.json)，问题模板见 [jev-questions.json](../../agent/jev-questions.json)。上线前通过真实账号 `GET /v1/models` 记录可用别名和响应版本。

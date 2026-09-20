@@ -1,0 +1,4 @@
+{"eventId": "1", "taskId": "ANA-20260920-001", "sequence": 1, "occurredAt": "2026-09-20T01:35:01Z", "type": "analysis_started", "payload": {"phase": "CONTEXT_LOADING"}}
+{"eventId": "2", "taskId": "ANA-20260920-001", "sequence": 2, "occurredAt": "2026-09-20T01:35:03Z", "type": "phase_changed", "payload": {"phase": "INVESTIGATING", "message": "Case context loaded"}}
+{"eventId": "3", "taskId": "ANA-20260920-001", "sequence": 3, "occurredAt": "2026-09-20T01:36:12Z", "type": "report_generated", "payload": {"reportVersion": 1, "reportUrl": "/api/ai/case-analysis/ANA-20260920-001"}}
+{"eventId": "4", "taskId": "ANA-20260920-001", "sequence": 4, "occurredAt": "2026-09-20T01:36:12Z", "type": "analysis_completed", "payload": {"status": "COMPLETED"}}

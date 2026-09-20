@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "provider": "typesafe",
+  "purpose": "atomic_manufacturing_case_judgments",
+  "officialDocs": "https://docs.typesafe.ai/",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "requestedModel": "jev-1.13.0",
+  "stableAlias": "jev-latest",
+  "recordResolvedModel": true,
+  "input": {
+    "modalities": [
+      "text"
+    ],
+    "stateShapes": [
+      "string",
+      "object",
+      "array_of_text"
+    ],
+    "primaryLanguage": "en",
+    "cjkRequiresEvaluation": true
+  },
+  "primitives": [
+    "choice",
+    "score",
+    "noul"
+  ],
+  "doesNotProvide": [
+    "full_report_generation",
+    "manufacturing_tool_execution",
+    "authorization"
+  ],
+  "retryableHttpStatus": [
+    429,
+    529
+  ],
+  "nonRetryableHttpStatus": [
+    401,
+    422
+  ],
+  "secrets": {
+    "apiKeyEnv": "TYPESAFE_API_KEY",
+    "committed": false
+  },
+  "productionPrerequisites": [
+    "legal_and_data_egress_approval",
+    "account_model_list_verified",
+    "golden_dataset_thresholds",
+    "cjk_evaluation"
+  ]
+}

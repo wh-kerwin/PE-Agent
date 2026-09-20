@@ -1,31 +1,12 @@
-# Milestones
+# 里程碑
 
-## M0
-Domain + API + Tool Contract 完成。
+| 里程碑 | 完成条件 |
+|---|---|
+| M0 契约基线 | 真实 Case/IAM/工具/Case Book 字段映射签字，Schema 样例通过 |
+| M1 嵌入闭环 | Dashboard → task → SSE/刷新恢复 → mock 报告 → Review |
+| M2 数据闭环 | 只读真实适配器、证据来源、部分结果、权限测试通过 |
+| M3 Jev 闭环 | 官方 API 接入、问题评估、阈值/CJK/故障降级测试通过 |
+| M4 质量闭环 | 黄金集、shadow、专家评审、发布门槛通过 |
+| M5 受控试点 | 指定用户、监控/回滚、调查耗时与修正率可量化 |
 
-## M1
-Agent Gateway + Task + SSE。
-
-## M2
-V1 Yield Drop Investigation。
-
-## M3
-V1 Frontend + Engineer Feedback。
-
-## M4
-Golden Dataset + Evaluation。
-
-## M5
-V2 Multi Case + Knowledge + Correlation。
-
-## M6
-V2 Pilot。
-
-## M7
-V3 Approval + Action。
-
-## M8
-V3 Monitoring + Verification。
-
-## M9
-受控生产环境 Pilot。
+V2/V3 在 V1 复盘后另立里程碑，不纳入上述完成率。

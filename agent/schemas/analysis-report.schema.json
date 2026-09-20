@@ -1,0 +1,560 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pe-agent.local/schemas/analysis-report-1.0.0.json",
+  "title": "PE Case Analysis Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "reportId",
+    "taskId",
+    "reportVersion",
+    "caseSnapshot",
+    "generatedAt",
+    "model",
+    "summary",
+    "impact",
+    "timeline",
+    "findings",
+    "evidence",
+    "correlations",
+    "hypotheses",
+    "similarCases",
+    "recommendations",
+    "uncertainties"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "reportId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reportVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "caseSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "caseVersion",
+        "caseType"
+      ],
+      "properties": {
+        "caseId": {
+          "type": "string"
+        },
+        "caseVersion": {
+          "type": "string"
+        },
+        "caseType": {
+          "const": "YIELD_DROP"
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "requestedModel",
+        "resolvedModel",
+        "questionSetVersion"
+      ],
+      "properties": {
+        "provider": {
+          "const": "typesafe"
+        },
+        "requestedModel": {
+          "type": "string"
+        },
+        "resolvedModel": {
+          "type": "string"
+        },
+        "questionSetVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "overview",
+        "severity"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "overview": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ]
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "yield",
+        "affectedLots",
+        "affectedWafers",
+        "affectedTools"
+      ],
+      "properties": {
+        "yield": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "observedPercent",
+            "baselinePercent",
+            "absoluteDropPercentagePoints"
+          ],
+          "properties": {
+            "observedPercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "baselinePercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "absoluteDropPercentagePoints": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "affectedLots": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "affectedWafers": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "affectedTools": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "occurredAt",
+          "title",
+          "evidenceIds"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "$ref": "#/$defs/nonEmptyStringArray"
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "findingId",
+          "level",
+          "title",
+          "description",
+          "evidenceIds"
+        ],
+        "properties": {
+          "findingId": {
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "OBSERVED",
+              "INFERRED"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "$ref": "#/$defs/nonEmptyStringArray"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "correlations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "correlationId",
+          "type",
+          "description",
+          "evidenceIds"
+        ],
+        "properties": {
+          "correlationId": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "TEMPORAL",
+              "TOOL",
+              "RECIPE",
+              "WAFER",
+              "HISTORICAL"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "$ref": "#/$defs/nonEmptyStringArray"
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hypothesis"
+      }
+    },
+    "similarCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "caseId",
+          "similarityReason",
+          "evidenceId"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "similarityReason": {
+            "type": "string"
+          },
+          "evidenceId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "recommendationId",
+          "category",
+          "action",
+          "reason",
+          "evidenceIds",
+          "requiresEngineerDecision"
+        ],
+        "properties": {
+          "recommendationId": {
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "IMMEDIATE",
+              "INVESTIGATION",
+              "FOLLOW_UP"
+            ]
+          },
+          "action": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "$ref": "#/$defs/nonEmptyStringArray"
+          },
+          "requiresEngineerDecision": {
+            "const": true
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uncertaintyId",
+          "description",
+          "impact",
+          "relatedEvidenceIds"
+        ],
+        "properties": {
+          "uncertaintyId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "relatedEvidenceIds": {
+            "$ref": "#/$defs/stringArray"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceId",
+        "kind",
+        "observation",
+        "source",
+        "entityRefs",
+        "eventTime",
+        "retrievedAt",
+        "quality",
+        "rawRef"
+      ],
+      "properties": {
+        "evidenceId": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "CASE",
+            "YIELD",
+            "WAFER",
+            "TOOL_EVENT",
+            "RECIPE",
+            "SPC",
+            "FDC",
+            "HISTORICAL_CASE"
+          ]
+        },
+        "observation": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "system",
+            "sourceId"
+          ],
+          "properties": {
+            "system": {
+              "type": "string"
+            },
+            "sourceId": {
+              "type": "string"
+            }
+          }
+        },
+        "entityRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "CASE",
+                  "LOT",
+                  "WAFER",
+                  "TOOL",
+                  "CHAMBER",
+                  "RECIPE",
+                  "PARAMETER"
+                ]
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "eventTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retrievedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "quality": {
+          "enum": [
+            "VERIFIED",
+            "PARTIAL",
+            "CONFLICTING"
+          ]
+        },
+        "rawRef": {
+          "type": "string",
+          "pattern": "^/api/ai/source-links/"
+        }
+      }
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hypothesisId",
+        "title",
+        "confidenceLevel",
+        "supportingEvidenceIds",
+        "contradictingEvidenceIds",
+        "missingEvidence",
+        "modelAssessment"
+      ],
+      "properties": {
+        "hypothesisId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "confidenceLevel": {
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ]
+        },
+        "supportingEvidenceIds": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "contradictingEvidenceIds": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "missingEvidence": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "modelAssessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "questionId",
+            "primitive",
+            "answer",
+            "distribution",
+            "confidence",
+            "resolvedModel"
+          ],
+          "properties": {
+            "questionId": {
+              "type": "string"
+            },
+            "primitive": {
+              "enum": [
+                "choice",
+                "score",
+                "noul"
+              ]
+            },
+            "answer": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "distribution": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "confidence": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "resolvedModel": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
