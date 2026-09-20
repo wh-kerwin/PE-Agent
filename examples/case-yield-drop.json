@@ -1,0 +1,16 @@
+{
+  "caseId": "CASE-20260920-001",
+  "caseType": "YIELD_DROP",
+  "severity": "HIGH",
+  "lotIds": [
+    "LOT001"
+  ],
+  "toolIds": [
+    "ETCH01"
+  ],
+  "recipeIds": [
+    "RCP100"
+  ],
+  "process": "ETCH",
+  "createdTime": "2026-09-20T09:00:00+08:00"
+}

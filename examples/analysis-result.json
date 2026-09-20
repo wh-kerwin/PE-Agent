@@ -1,0 +1,17 @@
+{
+  "summary": {
+    "title": "Yield Drop Analysis",
+    "description": "Example structure only"
+  },
+  "impact": {
+    "affectedLots": [],
+    "affectedWafers": [],
+    "affectedTools": []
+  },
+  "timeline": [],
+  "findings": [],
+  "evidence": [],
+  "hypotheses": [],
+  "recommendations": [],
+  "uncertainties": []
+}
