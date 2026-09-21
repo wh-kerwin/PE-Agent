@@ -5,8 +5,9 @@
 ## 当前定位
 
 - 项目：嵌入 PE Duty / Engineer Platform Dashboard 的 AI Case 分析功能。
+- 新会话操作指南：[CLAUDE.md](CLAUDE.md)；新会话先读取本文件，再按该指南执行命令和架构约定。
 - 当前分支：`feat/mock-first-vertical-slice`。
-- 当前基线提交：`ed9fbd0 feat: deliver mock-first case analysis vertical slice`。
+- 当前基线提交：`a1a4ad8`（mock-first vertical slice 与项目交接文件已同步到远端 `main`）。
 - 目标：完成 mock-first vertical slice 后，按外部输入和生产验收条件逐步推进真实集成。
 - 当前实现只证明契约、流程和部署形状，不代表生产就绪。
 
