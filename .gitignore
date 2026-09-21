@@ -12,5 +12,6 @@ node_modules/
 dist/
 playwright-report/
 test-results/
+.claude/worktrees/
 .DS_Store
 Thumbs.db
