@@ -1,0 +1,47 @@
+{
+  "name": "conflicting-sources",
+  "synthetic": true,
+  "expectedOutcome": "PARTIAL_RESULT",
+  "unavailableSources": [],
+  "evidenceIds": ["EV-SPC-CONFLICT", "EV-FDC-CONFLICT"],
+  "permissionProfile": {"name": "process-read", "permissions": ["case.read", "spc.read", "fdc.read"]},
+  "case": {
+    "caseId": "SYN-CASE-CONFLICT-001", "caseVersion": "1", "caseType": "YIELD_DROP",
+    "severity": "HIGH", "status": "OPEN", "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T03:00:00Z", "lotIds": ["SYN-LOT-CONFLICT"],
+    "toolIds": ["SYN-TOOL-03"], "recipeIds": ["SYN-RCP-03"],
+    "symptom": {"observedYieldPercent": 80.0, "baselineYieldPercent": 94.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_spc_evidence": {
+      "status": "SUCCEEDED", "requiredPermission": "spc.read",
+      "data": {"parameter": "CHAMBER_PRESSURE", "ruleViolation": true},
+      "source": {"system": "SYNTHETIC_SPC", "recordIds": ["SYN-SPC-CONFLICT"]},
+      "completeness": 1.0, "warnings": ["Conflicts with FDC trend"],
+      "evidence": [{
+        "evidenceId": "EV-SPC-CONFLICT", "kind": "SPC",
+        "observation": "Synthetic SPC indicates a chamber-pressure rule violation.",
+        "source": {"system": "SYNTHETIC_SPC", "sourceId": "SYN-SPC-CONFLICT"},
+        "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-03"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
+        "eventTime": "2026-09-20T02:45:00Z", "retrievedAt": "2026-09-20T03:01:00Z",
+        "quality": "CONFLICTING", "rawRef": "/api/ai/source-links/EV-SPC-CONFLICT",
+        "warnings": ["Conflicts with FDC trend"]
+      }]
+    },
+    "get_fdc_evidence": {
+      "status": "SUCCEEDED", "requiredPermission": "fdc.read",
+      "data": {"parameter": "CHAMBER_PRESSURE", "driftPercent": null},
+      "source": {"system": "SYNTHETIC_FDC", "recordIds": ["SYN-FDC-CONFLICT"]},
+      "completeness": 1.0, "warnings": ["Conflicts with SPC violation"],
+      "evidence": [{
+        "evidenceId": "EV-FDC-CONFLICT", "kind": "FDC",
+        "observation": "Synthetic FDC has no trustworthy drift value for the same pressure interval.",
+        "source": {"system": "SYNTHETIC_FDC", "sourceId": "SYN-FDC-CONFLICT"},
+        "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-03"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
+        "eventTime": "2026-09-20T02:45:00Z", "retrievedAt": "2026-09-20T03:01:01Z",
+        "quality": "CONFLICTING", "rawRef": "/api/ai/source-links/EV-FDC-CONFLICT",
+        "warnings": ["Conflicts with SPC violation"]
+      }]
+    }
+  }
+}

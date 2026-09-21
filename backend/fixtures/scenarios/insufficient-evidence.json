@@ -1,0 +1,27 @@
+{
+  "name": "insufficient-evidence",
+  "synthetic": true,
+  "expectedOutcome": "FAILED",
+  "unavailableSources": ["get_lot_yield", "get_spc_evidence"],
+  "evidenceIds": [],
+  "permissionProfile": {"name": "limited-source-read", "permissions": ["case.read", "yield.read", "spc.read"]},
+  "case": {
+    "caseId": "SYN-CASE-INSUFFICIENT", "caseVersion": "1", "caseType": "YIELD_DROP",
+    "severity": "MEDIUM", "status": "OPEN", "processStep": "SYNTHETIC_INSPECTION",
+    "createdAt": "2026-09-20T05:00:00Z", "lotIds": ["SYN-LOT-INSUFFICIENT"],
+    "toolIds": ["SYN-TOOL-05"], "recipeIds": [],
+    "symptom": {"observedYieldPercent": 89.0, "baselineYieldPercent": 93.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "FAILED", "requiredPermission": "yield.read", "completeness": 0.0,
+      "warnings": ["Synthetic source unavailable"], "errorCode": "UNAVAILABLE", "retryable": true,
+      "evidence": []
+    },
+    "get_spc_evidence": {
+      "status": "FAILED", "requiredPermission": "spc.read", "completeness": 0.0,
+      "warnings": ["Synthetic source unavailable"], "errorCode": "UNAVAILABLE", "retryable": true,
+      "evidence": []
+    }
+  }
+}

@@ -2,6 +2,7 @@
   "synthetic": true,
   "request": {
     "model": "jev-1.13.0",
+    "questionSetVersion": "yield-drop-jev-v1.0.0",
     "state": {
       "caseId": "CASE-20260920-001",
       "evidenceIds": [

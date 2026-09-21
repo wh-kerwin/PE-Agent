@@ -1,0 +1,45 @@
+{
+  "name": "recipe-change",
+  "synthetic": true,
+  "expectedOutcome": "COMPLETED",
+  "unavailableSources": [],
+  "evidenceIds": ["EV-YIELD-RECIPE", "EV-RECIPE-CHANGE"],
+  "permissionProfile": {"name": "recipe-investigator", "permissions": ["case.read", "yield.read", "recipe.read"]},
+  "case": {
+    "caseId": "SYN-CASE-RECIPE-001", "caseVersion": "3", "caseType": "YIELD_DROP",
+    "severity": "MEDIUM", "status": "OPEN", "processStep": "SYNTHETIC_DEPOSITION",
+    "createdAt": "2026-09-20T02:00:00Z", "lotIds": ["SYN-LOT-RECIPE"],
+    "toolIds": ["SYN-TOOL-02"], "recipeIds": ["SYN-RCP-02"],
+    "symptom": {"observedYieldPercent": 88.0, "baselineYieldPercent": 95.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "SUCCEEDED", "requiredPermission": "yield.read",
+      "data": {"observedPercent": 88.0, "baselinePercent": 95.0},
+      "source": {"system": "SYNTHETIC_YIELD", "recordIds": ["SYN-YLD-RECIPE"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-YIELD-RECIPE", "kind": "YIELD",
+        "observation": "Synthetic lot yield was 88.0% against a 95.0% matched baseline.",
+        "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-RECIPE"},
+        "entityRefs": [{"type": "LOT", "id": "SYN-LOT-RECIPE"}],
+        "eventTime": "2026-09-20T01:55:00Z", "retrievedAt": "2026-09-20T02:01:00Z",
+        "quality": "VERIFIED", "rawRef": "/api/ai/source-links/EV-YIELD-RECIPE"
+      }]
+    },
+    "get_recipe_snapshot": {
+      "status": "SUCCEEDED", "requiredPermission": "recipe.read",
+      "data": {"recipeId": "SYN-RCP-02", "version": "SYN-V2", "changedParameters": ["SYN_GAS_FLOW"]},
+      "source": {"system": "SYNTHETIC_RECIPE", "recordIds": ["SYN-RCP-SNAP-02"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-RECIPE-CHANGE", "kind": "RECIPE",
+        "observation": "Synthetic recipe SYN-RCP-02 used version SYN-V2 with a gas-flow change.",
+        "source": {"system": "SYNTHETIC_RECIPE", "sourceId": "SYN-RCP-SNAP-02"},
+        "entityRefs": [{"type": "RECIPE", "id": "SYN-RCP-02"}],
+        "eventTime": "2026-09-20T01:40:00Z", "retrievedAt": "2026-09-20T02:01:01Z",
+        "quality": "VERIFIED", "rawRef": "/api/ai/source-links/EV-RECIPE-CHANGE"
+      }]
+    }
+  }
+}

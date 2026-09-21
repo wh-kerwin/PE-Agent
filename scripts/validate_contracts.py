@@ -1,17 +1,24 @@
-from pathlib import Path
 import json
 import re
 import sys
+from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import SchemaError
 
 ROOT = Path(__file__).resolve().parents[1]
-errors = []
+errors: list[str] = []
 
-def load(path):
+
+def load(path: str) -> dict[str, Any] | None:
     try:
-        return json.loads((ROOT / path).read_text(encoding="utf-8"))
-    except Exception as exc:
+        value = json.loads((ROOT / path).read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            errors.append(f"{path}: top-level JSON value must be an object")
+            return None
+        return value
+    except (OSError, json.JSONDecodeError) as exc:
         errors.append(f"{path}: invalid JSON: {exc}")
         return None
 
@@ -27,7 +34,7 @@ jev_example = load("examples/jev-assessment.json")
 if schema and report:
     try:
         Draft202012Validator.check_schema(schema)
-    except Exception as exc:
+    except SchemaError as exc:
         errors.append(f"analysis-report.schema.json: invalid schema: {exc}")
     for err in Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(report):
         errors.append(f"analysis-result.json {list(err.absolute_path)}: {err.message}")
@@ -89,7 +96,7 @@ try:
         errors.append("sse-events.jsonl: sequence must start at 1 and be contiguous")
     if len({event["taskId"] for event in events}) != 1:
         errors.append("sse-events.jsonl: all events must reference one task")
-except Exception as exc:
+except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
     errors.append(f"sse-events.jsonl: {exc}")
 
 link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
