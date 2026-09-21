@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pe-agent.fullname" . }}
+  labels:
+    {{- include "pe-agent.labels" . | nindent 4 }}
+data:
+  profile: {{ .Values.profile | quote }}
+  archive-enabled: {{ .Values.config.archiveEnabled | quote }}

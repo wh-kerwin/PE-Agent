@@ -31,9 +31,16 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+pe_agent = ["analysis-report.schema.json"]
+
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config"
 asyncio_mode = "auto"
+markers = [
+  "integration: requires PostgreSQL or other service integration",
+  "live: requires explicitly enabled external services",
+]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -49,5 +56,5 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["testcontainers.*"]
+module = ["docker", "jsonschema", "testcontainers.*"]
 ignore_missing_imports = true

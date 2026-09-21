@@ -1,0 +1,36 @@
+{
+  "name": "fdc-timeout",
+  "synthetic": true,
+  "expectedOutcome": "PARTIAL_RESULT",
+  "unavailableSources": ["get_fdc_evidence"],
+  "evidenceIds": ["EV-YIELD-FDC-TIMEOUT"],
+  "permissionProfile": {"name": "fdc-read", "permissions": ["case.read", "yield.read", "fdc.read"]},
+  "case": {
+    "caseId": "SYN-CASE-FDC-TIMEOUT", "caseVersion": "2", "caseType": "YIELD_DROP",
+    "severity": "HIGH", "status": "OPEN", "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T04:00:00Z", "lotIds": ["SYN-LOT-FDC-TIMEOUT"],
+    "toolIds": ["SYN-TOOL-04"], "recipeIds": ["SYN-RCP-04"],
+    "symptom": {"observedYieldPercent": 81.0, "baselineYieldPercent": 96.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "SUCCEEDED", "requiredPermission": "yield.read",
+      "data": {"observedPercent": 81.0, "baselinePercent": 96.0},
+      "source": {"system": "SYNTHETIC_YIELD", "recordIds": ["SYN-YLD-TIMEOUT"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-YIELD-FDC-TIMEOUT", "kind": "YIELD",
+        "observation": "Synthetic lot yield was 81.0% against a 96.0% matched baseline.",
+        "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-TIMEOUT"},
+        "entityRefs": [{"type": "LOT", "id": "SYN-LOT-FDC-TIMEOUT"}],
+        "eventTime": "2026-09-20T03:55:00Z", "retrievedAt": "2026-09-20T04:01:00Z",
+        "quality": "VERIFIED", "rawRef": "/api/ai/source-links/EV-YIELD-FDC-TIMEOUT"
+      }]
+    },
+    "get_fdc_evidence": {
+      "status": "FAILED", "requiredPermission": "fdc.read", "completeness": 0.0,
+      "warnings": ["Synthetic timeout"], "errorCode": "TIMEOUT", "retryable": true,
+      "evidence": []
+    }
+  }
+}

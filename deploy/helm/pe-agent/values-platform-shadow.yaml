@@ -1,0 +1,8 @@
+profile: platform-shadow
+config:
+  environment: production
+  platformProfile: platform
+  decisionProfile: typesafe
+  archiveEnabled: false
+  platformBaseUrl: https://platform.invalid.example
+  typesafeBaseUrl: https://jev.invalid.example

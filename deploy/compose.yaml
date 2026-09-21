@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pe_agent
+      POSTGRES_USER: pe_agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-synthetic-local-only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pe_agent -d pe_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pe-agent-postgres:/var/lib/postgresql/data
+    networks: [internal]
+
+  migrate:
+    build:
+      context: ../backend
+    command:
+      - python
+      - -c
+      - "import os; from alembic import command; from alembic.config import Config; c = Config('alembic.ini'); c.set_main_option('sqlalchemy.url', os.environ['PE_AGENT_DATABASE_URL']); command.upgrade(c, 'head')"
+    environment: &backend-environment
+      PE_AGENT_ENVIRONMENT: ${PE_AGENT_ENVIRONMENT:-development}
+      PE_AGENT_DATABASE_URL: postgresql+asyncpg://pe_agent:${POSTGRES_PASSWORD:-synthetic-local-only}@postgres:5432/pe_agent
+      PE_AGENT_PLATFORM_PROFILE: ${PE_AGENT_PLATFORM_PROFILE:-mock}
+      PE_AGENT_DECISION_PROFILE: ${PE_AGENT_DECISION_PROFILE:-recorded}
+      PE_AGENT_ARCHIVE_ENABLED: ${PE_AGENT_ARCHIVE_ENABLED:-false}
+      PE_AGENT_PLATFORM_BASE_URL: ${PE_AGENT_PLATFORM_BASE_URL:-}
+      PE_AGENT_TYPESAFE_BASE_URL: ${PE_AGENT_TYPESAFE_BASE_URL:-}
+      PE_AGENT_MOCK_SCENARIO_PATH: ${PE_AGENT_MOCK_SCENARIO_PATH:-/app/fixtures/pressure-drift-success.json}
+      PE_AGENT_RECORDED_DECISION_DIR: ${PE_AGENT_RECORDED_DECISION_DIR:-/app/decisions}
+    volumes:
+      - ../backend/fixtures/scenarios:/app/fixtures:ro
+      - ../backend/fixtures/decisions:/app/decisions:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [internal]
+
+  api:
+    build:
+      context: ../backend
+    command: ["python", "-m", "uvicorn", "pe_agent.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    environment: *backend-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "${PE_AGENT_API_PORT:-8000}:8000"
+    volumes:
+      - ../backend/fixtures/scenarios:/app/fixtures:ro
+      - ../backend/fixtures/decisions:/app/decisions:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    networks: [edge, internal]
+
+  worker:
+    build:
+      context: ../backend
+    command: ["python", "-m", "pe_agent.worker"]
+    environment: *backend-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ../backend/fixtures/scenarios:/app/fixtures:ro
+      - ../backend/fixtures/decisions:/app/decisions:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    networks: [internal]
+
+  frontend:
+    build:
+      context: ../frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PE_AGENT_FRONTEND_PORT:-4173}:8080"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt: [no-new-privileges:true]
+    networks: [edge]
+
+volumes:
+  pe-agent-postgres: {}
+
+networks:
+  edge: {}
+  internal:
+    internal: true

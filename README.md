@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-2026-09-20：产品与工程设计基线 V1.1。仓库包含需求、接口契约、Agent 配置和合成样例，**尚未实现运行服务或平台集成**。`frontend/`、`backend/` 保留原状。`agent/` 是声明式设计资产，尚无执行器。示例不是生产调查结果。
+2026-09-20：已实现 `mock-recorded` 纵向切片，包括 FastAPI 服务、持久化任务/事件边界、确定性合成平台适配器、录制 Jev 决策、可嵌入 Vue 分析抽屉、四种部署 profile 与 FDE 集成工具。所有演示制造数据和录制模型响应均为合成数据；尚未验证任何客户平台、IAM、制造数据源、Case Book 或生产 Jev 工作负载。
 
 ## 一次分析
 
@@ -48,6 +48,37 @@ V1：Yield Drop、单 Agent、只读工具、可恢复 SSE、结构化报告、�
 V2：[多类型 Case 与交互调查](docs/01-product/PRD-V2.md)。V3：[审批后受控动作](docs/01-product/PRD-V3.md)。后两者是路线图。
 
 TypeSafe Jev 已按官方文档纳入设计：它用于 Choice / Score / Noul 原子判断，由代码控制调查与组装报告。当前仓库仍未配置 API Key 或实现适配器，不声称已经接入运行环境。
+
+## 一键合成演示
+
+默认 profile 为 `mock-recorded`，不会调用客户平台或 live Jev。需要 Docker Compose：
+
+```sh
+docker compose --env-file deploy/profiles/mock-recorded.env -f deploy/compose.yaml -f deploy/compose.mock-recorded.yaml up --build
+```
+
+启动后打开 `http://localhost:4173`，或执行只读 smoke test：
+
+```sh
+python scripts/smoke_test.py --base-url http://localhost:8000 --case-id CASE-20260920-001
+```
+
+完整流程、失败场景和清理命令见 [演示脚本](docs/integration/demo-script.md)。生产集成前必须阅读 [已知限制](docs/integration/known-limitations.md) 和 [FDE Runbook](docs/integration/fde-runbook.md)。
+
+## 本地开发验证
+
+```sh
+python -m pip install -r scripts/requirements.txt
+python -m pip install -e "backend[dev]"
+python scripts/validate_contracts.py
+python -m pytest backend/tests -q
+npm ci --prefix frontend
+npm --prefix frontend run typecheck
+npm --prefix frontend run test:unit
+npm --prefix frontend run build
+```
+
+Live TypeSafe smoke 默认跳过，仅在显式设置 `RUN_TYPESAFE_LIVE=1` 和 `TYPESAFE_API_KEY` 时运行。生产 profile 缺少平台适配器配置时会启动失败，绝不回落到 mock。
 
 ## 本地资料校验
 

@@ -1,0 +1,61 @@
+profile: mock-recorded
+
+image:
+  repository: pe-agent
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount:
+  api: 2
+  worker: 1
+
+service:
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  host: pe-agent.invalid.example
+  tlsSecretName: ""
+  annotations: {}
+
+externalDatabase:
+  secretName: pe-agent-database
+  urlKey: database-url
+
+runtimeSecrets:
+  # Existing Secret whose keys are exposed as environment variables; chart creates no Secret.
+  secretName: ""
+
+config:
+  environment: development
+  platformProfile: mock
+  decisionProfile: recorded
+  archiveEnabled: false
+  platformBaseUrl: ""
+  typesafeBaseUrl: ""
+  mockScenarioPath: /app/fixtures/pressure-drift-success.json
+
+resources:
+  api:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  worker:
+    requests: {cpu: 250m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  migration:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 250m, memory: 256Mi}
+
+networkPolicy:
+  enabled: true
+  dnsNamespaceSelector:
+    kubernetes.io/metadata.name: kube-system
+  database:
+    namespaceSelector: {}
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: postgresql
+    port: 5432
+  platformCidrs: []

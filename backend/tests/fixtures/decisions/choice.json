@@ -1,0 +1,44 @@
+{
+  "synthetic": true,
+  "request": {
+    "state": {
+      "caseId": "SYN-CHOICE-CASE",
+      "evidenceSummaries": [
+        {
+          "evidenceId": "EV-SYN-CHOICE-1",
+          "summary": "Synthetic SPC evidence is available while FDC is missing."
+        }
+      ]
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "next_branch": {
+        "type": "choice",
+        "instructions": "Choose the next synthetic investigation branch.",
+        "criteria": {
+          "SPC_FDC": "Inspect synthetic process signals",
+          "INSUFFICIENT_CONTEXT": "Do not select a branch"
+        }
+      }
+    },
+    "questionSetVersion": "synthetic-choice-v1"
+  },
+  "response": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "next_branch": {
+        "type": "choice",
+        "choice": "SPC_FDC",
+        "probabilities": {
+          "SPC_FDC": 0.8,
+          "INSUFFICIENT_CONTEXT": 0.2
+        },
+        "confidence": 0.6
+      }
+    },
+    "usage": {
+      "input_tokens": 120,
+      "output_tokens": 18
+    }
+  }
+}

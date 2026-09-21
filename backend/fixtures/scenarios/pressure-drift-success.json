@@ -1,0 +1,81 @@
+{
+  "name": "pressure-drift-success",
+  "synthetic": true,
+  "expectedOutcome": "COMPLETED",
+  "unavailableSources": [],
+  "evidenceIds": ["EV-YIELD-001", "EV-SPC-001", "EV-FDC-001"],
+  "permissionProfile": {
+    "name": "full-read",
+    "permissions": ["case.read", "yield.read", "spc.read", "fdc.read"]
+  },
+  "case": {
+    "caseId": "SYN-CASE-PRESSURE-001",
+    "caseVersion": "1",
+    "caseType": "YIELD_DROP",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T01:35:00Z",
+    "lotIds": ["SYN-LOT-001"],
+    "toolIds": ["SYN-TOOL-01"],
+    "recipeIds": ["SYN-RCP-01"],
+    "symptom": {"observedYieldPercent": 82.0, "baselineYieldPercent": 96.0},
+    "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "SUCCEEDED",
+      "requiredPermission": "yield.read",
+      "data": {"observedPercent": 82.0, "baselinePercent": 96.0},
+      "source": {"system": "SYNTHETIC_YIELD", "recordIds": ["SYN-YLD-001"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-YIELD-001",
+        "kind": "YIELD",
+        "observation": "Synthetic lot yield was 82.0% against a 96.0% matched baseline.",
+        "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-001"},
+        "entityRefs": [{"type": "LOT", "id": "SYN-LOT-001"}],
+        "eventTime": "2026-09-20T01:31:00Z",
+        "retrievedAt": "2026-09-20T01:36:01Z",
+        "quality": "VERIFIED",
+        "rawRef": "/api/ai/source-links/EV-YIELD-001"
+      }]
+    },
+    "get_spc_evidence": {
+      "status": "SUCCEEDED",
+      "requiredPermission": "spc.read",
+      "data": {"parameter": "CHAMBER_PRESSURE", "ruleViolation": true},
+      "source": {"system": "SYNTHETIC_SPC", "recordIds": ["SYN-SPC-001"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-SPC-001",
+        "kind": "SPC",
+        "observation": "Synthetic chamber pressure exceeded its active control limit.",
+        "source": {"system": "SYNTHETIC_SPC", "sourceId": "SYN-SPC-001"},
+        "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-01"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
+        "eventTime": "2026-09-20T01:23:00Z",
+        "retrievedAt": "2026-09-20T01:36:03Z",
+        "quality": "VERIFIED",
+        "rawRef": "/api/ai/source-links/EV-SPC-001"
+      }]
+    },
+    "get_fdc_evidence": {
+      "status": "SUCCEEDED",
+      "requiredPermission": "fdc.read",
+      "data": {"parameter": "CHAMBER_PRESSURE", "driftPercent": 8.2},
+      "source": {"system": "SYNTHETIC_FDC", "recordIds": ["SYN-FDC-001"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-FDC-001",
+        "kind": "FDC",
+        "observation": "Synthetic chamber pressure drifted 8.2% above the matched run median.",
+        "source": {"system": "SYNTHETIC_FDC", "sourceId": "SYN-FDC-001"},
+        "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-01"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
+        "eventTime": "2026-09-20T01:18:00Z",
+        "retrievedAt": "2026-09-20T01:36:04Z",
+        "quality": "VERIFIED",
+        "rawRef": "/api/ai/source-links/EV-FDC-001"
+      }]
+    }
+  }
+}

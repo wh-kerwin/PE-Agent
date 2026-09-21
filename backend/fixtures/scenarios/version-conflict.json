@@ -1,0 +1,16 @@
+{
+  "name": "version-conflict",
+  "synthetic": true,
+  "expectedOutcome": "CASE_VERSION_CONFLICT",
+  "unavailableSources": [],
+  "evidenceIds": [],
+  "permissionProfile": {"name": "case-read", "permissions": ["case.read"]},
+  "case": {
+    "caseId": "SYN-CASE-VERSION", "caseVersion": "8", "caseType": "YIELD_DROP",
+    "severity": "LOW", "status": "OPEN", "processStep": "SYNTHETIC_TEST",
+    "createdAt": "2026-09-20T06:00:00Z", "lotIds": ["SYN-LOT-VERSION"],
+    "toolIds": [], "recipeIds": [],
+    "symptom": {"observedYieldPercent": 90.0, "baselineYieldPercent": 95.0}, "synthetic": true
+  },
+  "toolResults": {}
+}

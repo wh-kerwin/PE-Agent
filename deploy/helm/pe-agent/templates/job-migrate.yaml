@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "pe-agent.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "pe-agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "pe-agent.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "pe-agent.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-c"]
+          args:
+            - "import os; from alembic import command; from alembic.config import Config; c = Config('alembic.ini'); c.set_main_option('sqlalchemy.url', os.environ['PE_AGENT_DATABASE_URL']); command.upgrade(c, 'head')"
+          env:
+            {{- include "pe-agent.env" . | nindent 12 }}
+          {{- with .Values.runtimeSecrets.secretName }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources.migration | nindent 12 }}
+          securityContext:
+            {{- include "pe-agent.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,39 @@
+{
+  "synthetic": true,
+  "request": {
+    "state": {
+      "caseId": "SYN-NOUL-CASE",
+      "evidenceSummaries": [
+        {
+          "evidenceId": "EV-SYN-NOUL-1",
+          "summary": "Synthetic case-specific countercheck is absent."
+        }
+      ]
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "needs_more_evidence": {
+        "type": "noul",
+        "instructions": "Does this synthetic hypothesis need more case-specific evidence?",
+        "criteria": {
+          "true": "Important evidence is missing",
+          "false": "Relevant case-specific checks are present"
+        }
+      }
+    },
+    "questionSetVersion": "synthetic-noul-v1"
+  },
+  "response": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "needs_more_evidence": {
+        "type": "noul",
+        "noul": 0.9
+      }
+    },
+    "usage": {
+      "input_tokens": 108,
+      "output_tokens": 12
+    }
+  }
+}

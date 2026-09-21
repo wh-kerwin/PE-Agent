@@ -1,0 +1,11 @@
+services:
+  migrate:
+    environment: &profile
+      PE_AGENT_DEPLOY_PROFILE: mock-live-jev
+      PE_AGENT_PLATFORM_PROFILE: mock
+      PE_AGENT_DECISION_PROFILE: typesafe
+      PE_AGENT_ARCHIVE_ENABLED: "false"
+  api:
+    environment: *profile
+  worker:
+    environment: *profile

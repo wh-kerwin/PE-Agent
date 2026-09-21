@@ -1,0 +1,38 @@
+{
+  "name": "history-mismatch",
+  "synthetic": true,
+  "expectedOutcome": "PARTIAL_RESULT",
+  "unavailableSources": [],
+  "evidenceIds": ["EV-YIELD-HISTORY"],
+  "permissionProfile": {"name": "history-reader", "permissions": ["case.read", "yield.read", "casebook.read"]},
+  "case": {
+    "caseId": "SYN-CASE-HISTORY", "caseVersion": "4", "caseType": "YIELD_DROP",
+    "severity": "MEDIUM", "status": "OPEN", "processStep": "SYNTHETIC_CLEAN",
+    "createdAt": "2026-09-20T08:00:00Z", "lotIds": ["SYN-LOT-HISTORY"],
+    "toolIds": ["SYN-TOOL-08"], "recipeIds": ["SYN-RCP-08"],
+    "symptom": {"observedYieldPercent": 84.0, "baselineYieldPercent": 92.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "SUCCEEDED", "requiredPermission": "yield.read",
+      "data": {"observedPercent": 84.0, "baselinePercent": 92.0},
+      "source": {"system": "SYNTHETIC_YIELD", "recordIds": ["SYN-YLD-HISTORY"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-YIELD-HISTORY", "kind": "YIELD",
+        "observation": "Synthetic lot yield was 84.0% against a 92.0% matched baseline.",
+        "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-HISTORY"},
+        "entityRefs": [{"type": "LOT", "id": "SYN-LOT-HISTORY"}],
+        "eventTime": "2026-09-20T07:55:00Z", "retrievedAt": "2026-09-20T08:01:00Z",
+        "quality": "VERIFIED", "rawRef": "/api/ai/source-links/EV-YIELD-HISTORY"
+      }]
+    },
+    "search_similar_cases": {
+      "status": "PARTIAL", "requiredPermission": "casebook.read",
+      "data": {"caseIds": [], "excluded": [{"caseId": "SYN-HIST-01", "reason": "process-step-mismatch"}]},
+      "source": {"system": "SYNTHETIC_CASE_BOOK", "recordIds": ["SYN-HIST-01"]},
+      "completeness": 0.5, "warnings": ["No history matched process step and recipe"],
+      "evidence": []
+    }
+  }
+}

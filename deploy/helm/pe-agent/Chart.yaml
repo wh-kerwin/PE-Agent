@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pe-agent
+description: PE case analysis API and worker
+version: 0.1.0
+appVersion: "0.1.0"
+type: application

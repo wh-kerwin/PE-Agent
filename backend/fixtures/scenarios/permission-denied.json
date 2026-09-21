@@ -1,0 +1,22 @@
+{
+  "name": "permission-denied",
+  "synthetic": true,
+  "expectedOutcome": "CASE_ACCESS_DENIED",
+  "unavailableSources": ["get_fdc_evidence"],
+  "evidenceIds": [],
+  "permissionProfile": {"name": "no-case-access", "permissions": []},
+  "case": {
+    "caseId": "SYN-CASE-DENIED", "caseVersion": "1", "caseType": "YIELD_DROP",
+    "severity": "HIGH", "status": "OPEN", "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T07:00:00Z", "lotIds": ["SYN-LOT-DENIED"],
+    "toolIds": ["SYN-TOOL-DENIED"], "recipeIds": [],
+    "symptom": {"observedYieldPercent": 70.0, "baselineYieldPercent": 95.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_fdc_evidence": {
+      "status": "FAILED", "requiredPermission": "fdc.read", "completeness": 0.0,
+      "warnings": ["Synthetic permission denial"], "errorCode": "PERMISSION_DENIED",
+      "retryable": false, "evidence": []
+    }
+  }
+}

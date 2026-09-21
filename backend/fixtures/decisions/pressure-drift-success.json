@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "request": {
+    "state": {
+      "caseId": "SYN-CASE-PRESSURE-001",
+      "evidenceIds": ["EV-YIELD-001", "EV-SPC-001", "EV-FDC-001"],
+      "evidenceSummaries": [
+        {"evidenceId": "EV-YIELD-001", "kind": "YIELD", "observation": "Synthetic lot yield was 82.0% against a 96.0% matched baseline.", "quality": "VERIFIED", "warnings": []},
+        {"evidenceId": "EV-SPC-001", "kind": "SPC", "observation": "Synthetic chamber pressure exceeded its active control limit.", "quality": "VERIFIED", "warnings": []},
+        {"evidenceId": "EV-FDC-001", "kind": "FDC", "observation": "Synthetic chamber pressure drifted 8.2% above the matched run median.", "quality": "VERIFIED", "warnings": []}
+      ],
+      "hypothesis": "Chamber-pressure observations may be associated with the yield loss",
+      "synthetic": true
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "pressure_drift_support": {
+        "type": "score",
+        "instructions": "How strongly does the supplied evidence support the named hypothesis? Evaluate support only; do not claim causation or select tools.",
+        "criteria": [
+          "INSUFFICIENT: evidence is missing or unusable",
+          "WEAK: little support or stronger contradictions",
+          "MIXED: meaningful support and contradiction",
+          "STRONG: multiple supporting observations with no material contradiction"
+        ]
+      }
+    },
+    "questionSetVersion": "yield-drop-jev-v1.0.0"
+  },
+  "response": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "pressure_drift_support": {
+        "type": "score",
+        "score": 2.72,
+        "legend": {"0": "INSUFFICIENT", "1": "WEAK", "2": "MIXED", "3": "STRONG"},
+        "probabilities": {"0": 0.01, "1": 0.04, "2": 0.17, "3": 0.78},
+        "confidence": 0.71
+      }
+    },
+    "usage": {"input_tokens": 612, "output_tokens": 21}
+  }
+}
