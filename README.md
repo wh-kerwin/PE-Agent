@@ -38,7 +38,7 @@ sequenceDiagram
 | 调查与模型约束 | [Agent 设计](docs/03-agent/agent-design.md)、[Agent 资产](agent/README.md) |
 | API / SSE | [业务 API](docs/04-api/api-spec.md)、[事件协议](docs/04-api/sse-events.md) |
 | 数据契约 | [报告 Schema](agent/schemas/analysis-report.schema.json)、[数据模型](docs/05-data/data-model.md) |
-| 开发与验收 | [开发计划](docs/07-development/development-plan.md)、[验收](docs/07-development/acceptance.md) |
+| 开发与验收 | [Claude 实施计划](docs/plans/2026-09-20-mock-first-platform-integration.md)、[开发计划](docs/07-development/development-plan.md)、[验收](docs/07-development/acceptance.md) |
 | 合成联调样例 | [示例说明](examples/README.md) |
 | 重整说明 | [变更记录](docs/07-development/regeneration-notes.md) |
 
