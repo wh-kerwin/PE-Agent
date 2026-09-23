@@ -3,6 +3,7 @@ config:
   environment: production
   platformProfile: platform
   decisionProfile: typesafe
+  explanationProfile: disabled
   archiveEnabled: false
   platformBaseUrl: https://platform.invalid.example
   typesafeBaseUrl: https://jev.invalid.example

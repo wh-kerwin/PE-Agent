@@ -38,7 +38,7 @@
     422
   ],
   "secrets": {
-    "apiKeyEnv": "TYPESAFE_API_KEY",
+    "apiKeyEnv": "PE_AGENT_TYPESAFE_API_KEY",
     "committed": false
   },
   "productionPrerequisites": [

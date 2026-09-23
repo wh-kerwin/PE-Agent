@@ -88,6 +88,17 @@ def validate(profile: str, config: dict[str, str], *, allow_placeholder: bool) -
             raise PreflightError("PE_AGENT_TYPESAFE_API_KEY must be injected at runtime")
         checks.append("decision-origin-syntax")
 
+    explanation_profile = config.get("PE_AGENT_EXPLANATION_PROFILE", "disabled")
+    if explanation_profile not in {"disabled", "openai_compatible"}:
+        raise PreflightError("PE_AGENT_EXPLANATION_PROFILE is invalid")
+    if explanation_profile == "openai_compatible":
+        require_url(config, "PE_AGENT_LLM_BASE_URL", allow_placeholder=allow_placeholder)
+        if not config.get("PE_AGENT_LLM_MODEL", "").strip():
+            raise PreflightError("PE_AGENT_LLM_MODEL must be configured")
+        if not config.get("PE_AGENT_LLM_API_KEY") and not allow_placeholder:
+            raise PreflightError("PE_AGENT_LLM_API_KEY must be injected at runtime")
+        checks.append("llm-origin-syntax")
+
     if profile == "platform-production" and config.get("PE_AGENT_ENVIRONMENT") != "production":
         raise PreflightError("platform-production requires PE_AGENT_ENVIRONMENT=production")
     return checks

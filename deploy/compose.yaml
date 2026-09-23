@@ -29,6 +29,15 @@ services:
       PE_AGENT_ARCHIVE_ENABLED: ${PE_AGENT_ARCHIVE_ENABLED:-false}
       PE_AGENT_PLATFORM_BASE_URL: ${PE_AGENT_PLATFORM_BASE_URL:-}
       PE_AGENT_TYPESAFE_BASE_URL: ${PE_AGENT_TYPESAFE_BASE_URL:-}
+      PE_AGENT_TYPESAFE_API_KEY: ${PE_AGENT_TYPESAFE_API_KEY:-}
+      PE_AGENT_EXPLANATION_PROFILE: ${PE_AGENT_EXPLANATION_PROFILE:-disabled}
+      PE_AGENT_LLM_BASE_URL: ${PE_AGENT_LLM_BASE_URL:-}
+      PE_AGENT_LLM_MODEL: ${PE_AGENT_LLM_MODEL:-}
+      PE_AGENT_LLM_API_KEY: ${PE_AGENT_LLM_API_KEY:-}
+      PE_AGENT_LLM_TIMEOUT_SECONDS: ${PE_AGENT_LLM_TIMEOUT_SECONDS:-15}
+      PE_AGENT_LLM_MAX_ATTEMPTS: ${PE_AGENT_LLM_MAX_ATTEMPTS:-2}
+      PE_AGENT_LLM_MAX_BACKOFF_SECONDS: ${PE_AGENT_LLM_MAX_BACKOFF_SECONDS:-8}
+      PE_AGENT_LLM_MAX_TOKENS: ${PE_AGENT_LLM_MAX_TOKENS:-1000}
       PE_AGENT_MOCK_SCENARIO_PATH: ${PE_AGENT_MOCK_SCENARIO_PATH:-/app/fixtures/pressure-drift-success.json}
       PE_AGENT_RECORDED_DECISION_DIR: ${PE_AGENT_RECORDED_DECISION_DIR:-/app/decisions}
     volumes:
@@ -89,9 +98,9 @@ services:
       - "${PE_AGENT_FRONTEND_PORT:-4173}:8080"
     read_only: true
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
-      - /tmp
+      - /var/cache/nginx:uid=101,gid=101,mode=0755
+      - /var/run:uid=101,gid=101,mode=0755
+      - /tmp:uid=101,gid=101,mode=1777
     security_opt: [no-new-privileges:true]
     networks: [edge]
 

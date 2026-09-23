@@ -5,10 +5,11 @@ from pathlib import Path
 import pytest
 
 from pe_agent.adapters.decisions import RecordedDecisionAdapter, TypeSafeDecisionAdapter
+from pe_agent.adapters.explanations import OpenAICompatibleExplanationAdapter
 from pe_agent.adapters.mock_platform import MockPlatformAdapter
 from pe_agent.adapters.platform.template import AdapterNotConfiguredError
 from pe_agent.config import Settings
-from pe_agent.worker.__main__ import _build_decision, _build_platform
+from pe_agent.worker.__main__ import _build_decision, _build_explanation, _build_platform
 
 FIXTURES = Path(__file__).parents[2] / "fixtures"
 
@@ -28,6 +29,7 @@ def test_mock_recorded_worker_adapters_are_explicitly_configured() -> None:
 
     assert isinstance(_build_platform(settings), MockPlatformAdapter)
     assert isinstance(_build_decision(settings), RecordedDecisionAdapter)
+    assert _build_explanation(settings) is None
 
 
 def test_customer_platform_worker_fails_closed() -> None:
@@ -55,3 +57,15 @@ def test_typesafe_worker_requires_and_uses_explicit_configuration() -> None:
     )
 
     assert isinstance(_build_decision(settings), TypeSafeDecisionAdapter)
+
+
+def test_openai_compatible_explanation_uses_separate_configuration() -> None:
+    settings = _settings(
+        explanation_profile="openai_compatible",
+        llm_base_url="https://llm.synthetic.invalid",
+        llm_model="synthetic-model",
+        llm_api_key="synthetic-llm-key",
+    )
+
+    assert isinstance(_build_explanation(settings), OpenAICompatibleExplanationAdapter)
+    assert isinstance(_build_decision(settings), RecordedDecisionAdapter)

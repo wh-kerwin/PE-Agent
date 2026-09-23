@@ -4,10 +4,11 @@ import CaseAnalysisAction from '@/components/CaseAnalysisAction.vue'
 import CaseAnalysisDrawer from '@/components/CaseAnalysisDrawer.vue'
 import { createCaseAnalysisClient } from '@/api/client'
 import type { CaseAnalysisCase, CaseAnalysisHost } from '@/types'
+import { DEMO_CASE_ID, DEMO_CASE_VERSION } from './fixtures'
 import { useCaseAnalysisStore } from '@/store/caseAnalysis'
 
 const cases = ref<CaseAnalysisCase[]>([
-  { caseId: 'CASE-20260920-001', caseVersion: '17', caseType: 'YIELD_DROP', severity: 'HIGH', analysisSummary: null },
+  { caseId: DEMO_CASE_ID, caseVersion: DEMO_CASE_VERSION, caseType: 'YIELD_DROP', severity: 'HIGH', analysisSummary: null },
   { caseId: 'CASE-20260920-002', caseVersion: '8', caseType: 'YIELD_DROP', severity: 'CRITICAL', analysisSummary: { taskId: 'ANA-PARTIAL-002', status: 'PARTIAL_RESULT', reviewStatus: 'NOT_REVIEWED' } },
   { caseId: 'CASE-20260919-014', caseVersion: '3', caseType: 'EQUIPMENT_ALARM', severity: 'MEDIUM', analysisSummary: { supported: false, disabledReason: 'V1 仅支持 Yield Drop Case' } },
 ])

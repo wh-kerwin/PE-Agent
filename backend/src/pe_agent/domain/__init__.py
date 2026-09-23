@@ -22,6 +22,7 @@ from pe_agent.domain.enums import (
     ToolStatus,
 )
 from pe_agent.domain.evidence import EntityReference, Evidence, EvidenceSource
+from pe_agent.domain.explanations import ExplanationRequest, ExplanationResult
 from pe_agent.domain.platform import (
     CaseContext,
     CaseContextRequest,
@@ -66,6 +67,8 @@ __all__ = [
     "EvidenceKind",
     "EvidenceQuality",
     "EvidenceSource",
+    "ExplanationRequest",
+    "ExplanationResult",
     "FdcEvidence",
     "FdcRequest",
     "HistoricalCaseEvidence",

@@ -11,6 +11,7 @@ def test_default_profile_is_mock_recorded() -> None:
 
     assert settings.platform_profile == "mock"
     assert settings.decision_profile == "recorded"
+    assert settings.explanation_profile == "disabled"
 
 
 @pytest.mark.parametrize(
@@ -34,6 +35,22 @@ def test_default_profile_is_mock_recorded() -> None:
             },
             "blank",
         ),
+        ({"explanation_profile": "openai_compatible"}, "LLM base URL"),
+        (
+            {
+                "explanation_profile": "openai_compatible",
+                "llm_base_url": "https://llm.synthetic.invalid",
+            },
+            "LLM model",
+        ),
+        (
+            {
+                "explanation_profile": "openai_compatible",
+                "llm_base_url": "https://llm.synthetic.invalid",
+                "llm_model": "synthetic-model",
+            },
+            "LLM_API_KEY",
+        ),
     ],
 )
 def test_external_profiles_fail_when_not_configured(
@@ -43,6 +60,23 @@ def test_external_profiles_fail_when_not_configured(
         Settings(**overrides)
 
 
+def test_disabled_optional_profiles_accept_compose_empty_strings() -> None:
+    settings = Settings(
+        platform_profile="mock",
+        platform_base_url="",
+        decision_profile="typesafe",
+        typesafe_base_url="https://typesafe.synthetic.invalid",
+        typesafe_api_key="synthetic-test-key",
+        explanation_profile="disabled",
+        llm_base_url="",
+        llm_model="",
+        llm_api_key="",
+    )
+
+    assert settings.platform_profile == "mock"
+    assert settings.explanation_profile == "disabled"
+
+
 def test_external_profiles_accept_explicit_configuration() -> None:
     settings = Settings(
         platform_profile="platform",
@@ -50,10 +84,15 @@ def test_external_profiles_accept_explicit_configuration() -> None:
         decision_profile="typesafe",
         typesafe_base_url="https://typesafe.synthetic.invalid",
         typesafe_api_key="synthetic-test-key",
+        explanation_profile="openai_compatible",
+        llm_base_url="https://llm.synthetic.invalid",
+        llm_model="synthetic-model",
+        llm_api_key="synthetic-llm-key",
     )
 
     assert settings.platform_profile == "platform"
     assert settings.decision_profile == "typesafe"
+    assert settings.explanation_profile == "openai_compatible"
 
 
 @pytest.mark.parametrize(

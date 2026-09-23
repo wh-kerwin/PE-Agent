@@ -6,8 +6,8 @@
 
 - 项目：嵌入 PE Duty / Engineer Platform Dashboard 的 AI Case 分析功能。
 - 新会话操作指南：[CLAUDE.md](CLAUDE.md)；新会话先读取本文件，再按该指南执行命令和架构约定。
-- 当前分支：`feat/mock-first-vertical-slice`。
-- 当前基线提交：`a1a4ad8`（mock-first vertical slice 与项目交接文件已同步到远端 `main`）。
+- 当前分支：`main`。
+- 当前基线提交：`4d06013`（mock-first vertical slice 与仓库指导已同步到 main）。
 - 目标：完成 mock-first vertical slice 后，按外部输入和生产验收条件逐步推进真实集成。
 - 当前实现只证明契约、流程和部署形状，不代表生产就绪。
 
@@ -17,7 +17,9 @@
 - PostgreSQL 任务、事件、outbox、报告、review、archive 模型及 Alembic migration。
 - Worker lease/fence、CAS finalization、取消、重试、事件持久化和基础恢复能力。
 - Mock platform adapters、Evidence 规范化、报告 Schema 与语义校验。
-- Recorded Jev Choice / Score / Noul 决策契约；live TypeSafe smoke 仅显式 opt-in。
+- Recorded Jev Choice / Score / Noul 决策契约；live TypeSafe smoke 仅显式 opt-in；Jev 配置使用独立的 `PE_AGENT_TYPESAFE_BASE_URL` 与运行时 `PE_AGENT_TYPESAFE_API_KEY`。
+- 可选 OpenAI-compatible 表达层：独立 `ExplanationPort`、受限非流式 chat-completions adapter、`expression` 非权威命名空间；默认 disabled，不作为 Jev fallback。
+- Mock 演示 Case 的 canonical 标识统一为 `SYN-CASE-PRESSURE-001` / version `1`；前端 Demo、E2E、smoke 默认值与后端 scenario/recording 一致。`mock-live-jev` API smoke 已用该 Case 返回 `202` 并创建任务。
 - Engineer Review：报告版本校验、任务级幂等、revision、假设引用验证。
 - Case Book：仅 mock archive；默认关闭；production 或真实 platform profile 开启会启动失败。
 - SSE：字符串 cursor、有限 replay、heartbeat、terminal close、周期性身份复核。
@@ -31,17 +33,17 @@
 
 最近一次完整后端验证：
 
-- `142 passed, 1 skipped`；跳过的是默认关闭的 live TypeSafe smoke。
+- `146 passed, 16 skipped`；跳过的是 Docker 不可用时的 PostgreSQL 集成测试和默认关闭的 live TypeSafe smoke。
 - Ruff 通过。
-- strict mypy 通过，45 个源文件。
+- strict mypy 通过，49 个源文件。
 - Contract validation 通过。
 - Deployment validation 通过。
-- `preflight.py --profile mock-recorded` 通过。
-- Docker Compose 合并配置通过。
-- PostgreSQL 集成测试 15 个通过。
+- `preflight.py --profile mock-recorded --allow-synthetic-placeholders` 通过。
+- Docker Compose 合并配置及 `mock-live-jev` image build/up 通过：PostgreSQL healthy、migration Exited (0)、API healthy、Worker running、Frontend running；前端 `/` 返回 200，API `/health/live` 返回 `{"status":"ok"}`。
+- Frontend Nginx 以非 root 用户和只读文件系统运行；`/var/cache/nginx`、`/var/run`、`/tmp` 使用 UID/GID 101 的 tmpfs。基础镜像关于 `user` directive 的 warning 不影响运行。
 - `git diff --check` 通过。
 
-已知环境限制：前端依赖未安装，`vue-tsc`、前端 unit test、build、Playwright 和浏览器验收尚未运行；此前安装依赖被环境策略拦截，不要绕过该限制。
+已知环境限制：前端 `pnpm install` 后，`vue-tsc`、8 个前端 unit test、production build 和 3 个 Playwright E2E 均通过；Compose `mock-live-jev` 实机 build/up、前端 Nginx 和 API 健康检查也已通过。gstack 浏览器因独立 headless shell 路径缺失未能启动，浏览器流程已由 Playwright E2E 覆盖；Helm CLI 和本轮 PostgreSQL 集成测试仍未执行或受环境限制。
 
 ## 必须遵守的约束
 
@@ -61,9 +63,9 @@
 
 按优先级继续：
 
-1. 在获得安装许可后安装 frontend lockfile 依赖，运行 typecheck、unit test、build、Playwright E2E，并启动浏览器验收。
-2. 实际运行 mock Compose image build/up，验证 frontend nginx 的 non-root、read-only filesystem、tmpfs 和 proxy/SSE 行为。
-3. 有 Helm CLI 时运行 lint/template；做 clean-checkout smoke test。
+1. 已完成前端依赖安装后的 typecheck、unit test、build、Playwright E2E，以及 Compose mock-live-jev build/up 和 Nginx/API 健康检查；待 gstack/headed 浏览器工具可用时补充视觉验收。
+2. 有 Helm CLI 时运行 lint/template；做 clean-checkout smoke test。
+3. 完成 OpenAI-compatible 表达层的企业出域/质量/容量评审，取得真实 Jev 与 LLM 的合规批准和运行凭据；当前功能仍默认关闭，不代表生产可用。
 4. 获取并记录宿主 Case API、SSO/IAM、Lot/Wafer/Tool/Recipe/SPC/FDC、历史 Case/Case Book 的官方资料和脱敏样例。
 5. 在资料齐全后实现真实平台只读 adapters、身份集成和真实 Case Book adapter；先走 `platform-shadow`、archive disabled 和 golden Case 对比。
 6. 持久化 tool execution 审计、normalized Evidence、model assessment 元数据；评估 lease renewal/checkpoint resume、SIGTERM 和已安装 wheel 运行。

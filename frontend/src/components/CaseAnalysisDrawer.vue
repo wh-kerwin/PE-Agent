@@ -174,6 +174,15 @@ function warningText(value: unknown) { return typeof value === 'string' ? value 
             </div>
           </section>
 
+          <section v-if="activeReport.expression" class="report-section expression-panel" aria-labelledby="expression-title">
+            <div class="section-heading">
+              <div><p class="eyebrow">OPTIONAL EXPRESSION</p><h2 id="expression-title">模型表达（非权威）</h2></div>
+              <a-tag color="orange">仅供阅读</a-tag>
+            </div>
+            <p class="plain-text">{{ activeReport.expression.text }}</p>
+            <p class="expression-meta">{{ activeReport.expression.resolvedModel }} · 不改变证据、判断或工程师复核结论</p>
+          </section>
+
           <section class="report-section" aria-labelledby="hypotheses-title">
             <div class="section-heading"><div><p class="eyebrow">HYPOTHESES</p><h2 id="hypotheses-title">AI 假设</h2></div><span class="count">{{ activeReport.hypotheses.length }}</span></div>
             <article v-for="hypothesis in activeReport.hypotheses" :key="hypothesis.hypothesisId" class="content-card hypothesis-card">
@@ -279,6 +288,7 @@ h1, h2, h3, h4, p { margin-top: 0; } h1 { margin-bottom: 0; font-size: 27px; } h
 .event-list { display: grid; margin: 18px 0; padding: 0; gap: 10px; list-style: none; }.event-list li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; }.event-list time { color: var(--color-text-3); font-size: 12px; }.event-complete { color: rgb(var(--green-6)); }.event-failed { color: rgb(var(--orange-6)); }
 .partial-alert { margin-top: 18px; }.partial-alert p { margin-bottom: 5px; }.partial-alert ul, .data-gap ul, .missing-evidence ul { margin-bottom: 0; padding-left: 20px; }
 .report-hero { color: white; border: 0; background: linear-gradient(135deg, #16233d 0%, #234d74 100%); }.report-hero .eyebrow { color: #8dd8ff; }.report-hero .plain-text { max-width: 68ch; color: rgba(255,255,255,.87); line-height: 1.7; }
+.expression-panel { border-color: rgb(var(--orange-3)); background: rgb(var(--orange-1)); }.expression-meta { margin: 8px 0 0; color: var(--color-text-3); font-size: 12px; }
 .impact-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 20px; gap: 10px; }.impact-grid div { padding: 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(255,255,255,.07); }.impact-grid span { display: block; color: rgba(255,255,255,.67); font-size: 12px; }.impact-grid strong { display: block; margin-top: 4px; font-size: 20px; }
 .count { display: grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; background: var(--color-neutral-2); font-weight: 700; }.content-card { margin-top: 12px; padding: 18px; border: 1px solid var(--color-neutral-3); border-radius: 9px; background: var(--color-fill-1); }.plain-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }.hypothesis-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }.empty-copy { color: var(--color-text-3); }.missing-evidence { margin-top: 15px; padding: 12px; border-left: 3px solid rgb(var(--orange-5)); background: rgb(var(--orange-1)); }.model-signal { margin-top: 12px; color: var(--color-text-3); }.model-signal summary { cursor: pointer; }.model-signal p { margin: 8px 0 0; }
 .compact-row { display: flex; align-items: start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-neutral-3); }.compact-row:last-child { border-bottom: 0; }.compact-row p { margin: 0; }.recommendation > h3 { margin-top: 10px; }.uncertainty { border-color: rgb(var(--orange-3)); }.uncertainty article + article { margin-top: 14px; }.uncertainty article p { margin: 4px 0 0; color: var(--color-text-2); }

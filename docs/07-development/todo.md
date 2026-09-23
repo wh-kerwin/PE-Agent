@@ -21,14 +21,16 @@
 - [x] PostgreSQL migration、生命周期 CHECK 约束、并发/租约/回滚集成测试
 - [x] Compose、Helm、非 root 容器、CI、preflight 与 contract/deployment validation
 - [x] 安全回归：scope hash 服务端派生、禁止权限范围扩张、生产 fail-closed
+- [x] 独立 OpenAI-compatible 表达层 adapter、环境变量配置、非权威 expression schema 与默认关闭部署校验
 
 ## 待完成或受阻
 
-- [ ] 安装前端 lockfile 依赖后运行 typecheck、unit test、build、Playwright E2E 与浏览器验收（当前被环境策略阻塞）
-- [ ] 实际 Compose image build/up 与 nginx 非 root/read-only 浏览器验收
+- [x] 前端依赖安装后的 typecheck、unit test、build 与 Playwright E2E（8 个 unit test、3 个 E2E 通过）
+- [x] 实际 Compose `mock-live-jev` image build/up、Nginx 非 root/read-only/tmpfs、前端 200 与 API health 验收
 - [ ] Helm CLI lint/template 与 clean-checkout smoke test
 - [ ] 宿主 Case API、SSO/IAM、制造平台只读 adapters 与真实 Case Book adapter
 - [ ] TypeSafe 企业条款、数据区域/ZDR、实际 API key/账号与 live 验收
+- [ ] OpenAI-compatible 表达层的企业出域、质量、容量和生产启用评审（当前 adapter 仅为默认关闭的实验性能力）
 - [ ] 持久化 tool execution 审计、normalized Evidence、model assessment 元数据
 - [ ] worker lease renewal/checkpoint resume 与 SIGTERM/已安装 wheel 运行验收
 - [ ] 黄金集、CJK/故障/越权扩展测试和 shadow pilot

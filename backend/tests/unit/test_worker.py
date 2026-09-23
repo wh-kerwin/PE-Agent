@@ -16,6 +16,8 @@ from pe_agent.domain import (
     DecisionRequest,
     DecisionResult,
     DecisionUsage,
+    ExplanationRequest,
+    ExplanationResult,
     ReportOutcome,
     TaskStatus,
 )
@@ -83,6 +85,25 @@ class BlockingDecisionPort:
         raise AssertionError("unreachable")
 
 
+class CapturingExplanationPort:
+    def __init__(self, *, error: Exception | None = None) -> None:
+        self.requests: list[ExplanationRequest] = []
+        self.error = error
+
+    async def explain(self, request: ExplanationRequest) -> ExplanationResult:
+        self.requests.append(request)
+        if self.error is not None:
+            raise self.error
+        return ExplanationResult(
+            text="Cited observations remain the authority for engineer review.",
+            requested_model="synthetic-model",
+            resolved_model="synthetic-model-2026-09",
+            input_tokens=10,
+            output_tokens=8,
+            latency_ms=2,
+        )
+
+
 def _work(scenario_name: str = "pressure-drift-success") -> tuple[WorkItem, Any]:
     scenario = load_scenario(FIXTURES / f"{scenario_name}.json")
     return (
@@ -118,12 +139,14 @@ def _runner(
     scenario: Any,
     decision_port: Any,
     *,
+    explanation_port: Any = None,
     task_timeout: timedelta = timedelta(seconds=45),
 ) -> WorkerRunner:
     return WorkerRunner(
         coordinator,
         YieldDropWorkflow(MockPlatformAdapter(scenario, clock=lambda: NOW)),
         decision_port,
+        explanation_port=explanation_port,
         lease_duration=timedelta(seconds=60),
         task_timeout=task_timeout,
         clock=lambda: NOW,
@@ -178,6 +201,46 @@ async def test_run_once_collects_decides_and_finalizes_completed_report() -> Non
     )
     assert "rawRef" not in str(request.state)
     assert "sourceId" not in str(request.state)
+
+
+@pytest.mark.asyncio
+async def test_explanation_is_non_authoritative_and_receives_whitelisted_report_view() -> None:
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+    explanation = CapturingExplanationPort()
+
+    await _runner(
+        coordinator,
+        scenario,
+        CapturingDecisionPort(),
+        explanation_port=explanation,
+    ).run_once()
+
+    outcome = coordinator.finalizations[0][1]
+    assert outcome.terminal_status is TaskStatus.COMPLETED
+    assert outcome.report is not None
+    assert outcome.report["expression"]["nonAuthoritative"] is True
+    assert "evidence" not in explanation.requests[0].report_view
+    assert "rawRef" not in str(explanation.requests[0].report_view)
+
+
+@pytest.mark.asyncio
+async def test_explanation_failure_keeps_canonical_report() -> None:
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+
+    await _runner(
+        coordinator,
+        scenario,
+        CapturingDecisionPort(),
+        explanation_port=CapturingExplanationPort(error=RuntimeError("secret body")),
+    ).run_once()
+
+    outcome = coordinator.finalizations[0][1]
+    assert outcome.terminal_status is TaskStatus.COMPLETED
+    assert outcome.report is not None
+    assert "expression" not in outcome.report
+    assert "secret" not in str(outcome)
 
 
 @pytest.mark.asyncio

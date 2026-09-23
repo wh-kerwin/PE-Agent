@@ -12,7 +12,7 @@ Wait for PostgreSQL, migration, API, worker, and frontend health checks, then op
 
 ## Golden path
 
-1. Select `CASE-20260920-001` (`pressure-drift-success`).
+1. Select `SYN-CASE-PRESSURE-001` (version `1`, `pressure-drift-success`).
 2. Choose **AI Analysis** and verify one task is created.
 3. Watch the fixed phases advance through context, baseline, process data, comparison, hypotheses, and report validation.
 4. Verify the report labels observations separately from inferences and every conclusion links to evidence.
@@ -24,7 +24,7 @@ Wait for PostgreSQL, migration, API, worker, and frontend health checks, then op
 Optional API smoke:
 
 ```sh
-python scripts/smoke_test.py --base-url http://localhost:8000 --case-id CASE-20260920-001
+python scripts/smoke_test.py --base-url http://localhost:8000 --case-id SYN-CASE-PRESSURE-001 --case-version 1
 ```
 
 The smoke test is read-only with respect to manufacturing systems and does not archive unless explicitly enabled.

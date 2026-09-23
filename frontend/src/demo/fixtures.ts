@@ -1,11 +1,14 @@
 import type { AnalysisReport, TaskEnvelope } from '@/types'
 
+export const DEMO_CASE_ID = 'SYN-CASE-PRESSURE-001'
+export const DEMO_CASE_VERSION = '1'
+
 export const demoReport: AnalysisReport = {
   schemaVersion: '1.0.0',
   reportId: 'RPT-ANA-001-V1',
   taskId: 'ANA-20260920-001',
   reportVersion: 1,
-  caseSnapshot: { caseId: 'CASE-20260920-001', caseVersion: '17', caseType: 'YIELD_DROP' },
+  caseSnapshot: { caseId: DEMO_CASE_ID, caseVersion: DEMO_CASE_VERSION, caseType: 'YIELD_DROP' },
   generatedAt: '2026-09-20T01:36:12Z',
   model: { provider: 'typesafe', requestedModel: 'jev-1.13.0', resolvedModel: 'jev-1.13.0', questionSetVersion: 'yield-drop-jev-v1.0.0' },
   summary: {

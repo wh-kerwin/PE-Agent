@@ -82,8 +82,8 @@ def main() -> int:
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--analysis", action="store_true", help="create an idempotent synthetic analysis task")
-    parser.add_argument("--case-id", default="CASE-20260920-001")
-    parser.add_argument("--case-version", default="17")
+    parser.add_argument("--case-id", default="SYN-CASE-PRESSURE-001")
+    parser.add_argument("--case-version", default="1")
     args = parser.parse_args()
     parsed = urllib.parse.urlparse(args.base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:

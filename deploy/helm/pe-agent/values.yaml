@@ -32,9 +32,16 @@ config:
   environment: development
   platformProfile: mock
   decisionProfile: recorded
+  explanationProfile: disabled
   archiveEnabled: false
   platformBaseUrl: ""
   typesafeBaseUrl: ""
+  llmBaseUrl: ""
+  llmModel: ""
+  llmTimeoutSeconds: 15
+  llmMaxAttempts: 2
+  llmMaxBackoffSeconds: 8
+  llmMaxTokens: 1000
   mockScenarioPath: /app/fixtures/pressure-drift-success.json
 
 resources:

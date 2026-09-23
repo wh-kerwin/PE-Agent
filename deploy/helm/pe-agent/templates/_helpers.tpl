@@ -43,12 +43,26 @@ capabilities:
   value: {{ .Values.config.platformProfile | quote }}
 - name: PE_AGENT_DECISION_PROFILE
   value: {{ .Values.config.decisionProfile | quote }}
+- name: PE_AGENT_EXPLANATION_PROFILE
+  value: {{ .Values.config.explanationProfile | quote }}
 - name: PE_AGENT_ARCHIVE_ENABLED
   value: {{ .Values.config.archiveEnabled | quote }}
 - name: PE_AGENT_PLATFORM_BASE_URL
   value: {{ .Values.config.platformBaseUrl | quote }}
 - name: PE_AGENT_TYPESAFE_BASE_URL
   value: {{ .Values.config.typesafeBaseUrl | quote }}
+- name: PE_AGENT_LLM_BASE_URL
+  value: {{ .Values.config.llmBaseUrl | quote }}
+- name: PE_AGENT_LLM_MODEL
+  value: {{ .Values.config.llmModel | quote }}
+- name: PE_AGENT_LLM_TIMEOUT_SECONDS
+  value: {{ .Values.config.llmTimeoutSeconds | quote }}
+- name: PE_AGENT_LLM_MAX_ATTEMPTS
+  value: {{ .Values.config.llmMaxAttempts | quote }}
+- name: PE_AGENT_LLM_MAX_BACKOFF_SECONDS
+  value: {{ .Values.config.llmMaxBackoffSeconds | quote }}
+- name: PE_AGENT_LLM_MAX_TOKENS
+  value: {{ .Values.config.llmMaxTokens | quote }}
 - name: PE_AGENT_MOCK_SCENARIO_PATH
   value: {{ .Values.config.mockScenarioPath | quote }}
 - name: PE_AGENT_DATABASE_URL

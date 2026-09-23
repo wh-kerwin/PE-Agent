@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -8,8 +9,9 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from pe_agent.adapters.explanations import ExplanationError
 from pe_agent.adapters.persistence.repositories import ACTIVE_STATUSES, Lease, TaskRepository
-from pe_agent.application.reporting import compose_report
+from pe_agent.application.reporting import attach_expression, compose_report
 from pe_agent.application.yield_drop_workflow import WorkflowCollection, YieldDropWorkflow
 from pe_agent.domain import (
     DecisionPrimitive,
@@ -18,14 +20,16 @@ from pe_agent.domain import (
     DecisionResult,
     Evidence,
     EvidenceKind,
+    ExplanationRequest,
     ReportInput,
     ReportOutcome,
     TaskStatus,
 )
-from pe_agent.ports import DecisionPort
+from pe_agent.ports import DecisionPort, ExplanationPort
 
 Clock = Callable[[], datetime]
 QUESTION_SET_VERSION = "yield-drop-jev-v1.0.0"
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -102,6 +106,7 @@ class WorkerRunner:
         workflow: YieldDropWorkflow,
         decision_port: DecisionPort,
         *,
+        explanation_port: ExplanationPort | None = None,
         lease_duration: timedelta = timedelta(seconds=60),
         task_timeout: timedelta = timedelta(seconds=45),
         clock: Clock | None = None,
@@ -113,6 +118,7 @@ class WorkerRunner:
         self._coordinator = coordinator
         self._workflow = workflow
         self._decision_port = decision_port
+        self._explanation_port = explanation_port
         self._lease_duration = lease_duration
         self._task_timeout = task_timeout
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -131,7 +137,8 @@ class WorkerRunner:
                 TaskStatus.TIMEOUT,
                 ("ANALYSIS_TIMEOUT",),
             )
-        except Exception:
+        except Exception as exc:
+            LOGGER.error("analysis_failed error_type=%s", type(exc).__name__)
             outcome = ReportOutcome(
                 None,
                 TaskStatus.FAILED,
@@ -172,7 +179,7 @@ class WorkerRunner:
                 )
             )
             resolved_model = decision.resolved_model
-        return compose_report(
+        outcome = compose_report(
             ReportInput(
                 task_id=work.lease.task_id,
                 report_version=1,
@@ -187,12 +194,59 @@ class WorkerRunner:
                 decision=decision,
             )
         )
+        if outcome.report is None or self._explanation_port is None:
+            return outcome
+        try:
+            explanation = await self._explanation_port.explain(
+                ExplanationRequest(
+                    report_view=_explanation_view(outcome.report),
+                    synthetic=collection.context.case.synthetic,
+                )
+            )
+        except ExplanationError as exc:
+            LOGGER.warning("explanation_unavailable error_type=%s", type(exc).__name__)
+            return outcome
+        except Exception as exc:
+            LOGGER.error("explanation_unavailable error_type=%s", type(exc).__name__)
+            return outcome
+        return attach_expression(
+            outcome,
+            expression={
+                "provider": "openai-compatible",
+                "requestedModel": explanation.requested_model,
+                "resolvedModel": explanation.resolved_model,
+                "text": explanation.text,
+                "nonAuthoritative": True,
+                "usage": {
+                    "inputTokens": explanation.input_tokens,
+                    "outputTokens": explanation.output_tokens,
+                    "latencyMs": explanation.latency_ms,
+                },
+            },
+        )
 
     def _now(self) -> datetime:
         now = self._clock()
         if now.tzinfo is None or now.utcoffset() is None:
             raise ValueError("worker clock must return an aware timestamp")
         return now
+
+
+def _explanation_view(report: dict[str, object]) -> dict[str, object]:
+    return {
+        key: report[key]
+        for key in (
+            "caseSnapshot",
+            "summary",
+            "impact",
+            "findings",
+            "correlations",
+            "hypotheses",
+            "recommendations",
+            "uncertainties",
+        )
+        if key in report
+    }
 
 
 def _decision_request(

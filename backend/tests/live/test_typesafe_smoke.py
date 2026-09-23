@@ -15,11 +15,18 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.live
 @pytest.mark.asyncio
 async def test_typesafe_single_synthetic_noul_smoke() -> None:
-    if os.getenv("RUN_TYPESAFE_LIVE") != "1" or not os.getenv("TYPESAFE_API_KEY"):
-        pytest.skip("set RUN_TYPESAFE_LIVE=1 and TYPESAFE_API_KEY to run live TypeSafe smoke")
+    if os.getenv("PE_AGENT_RUN_TYPESAFE_LIVE") != "1" or not os.getenv(
+        "PE_AGENT_TYPESAFE_API_KEY"
+    ):
+        pytest.skip(
+            "set PE_AGENT_RUN_TYPESAFE_LIVE=1 and PE_AGENT_TYPESAFE_API_KEY "
+            "to run live TypeSafe smoke"
+        )
 
-    api_key = os.environ["TYPESAFE_API_KEY"]
-    endpoint = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai/v1/systemone")
+    api_key = os.environ["PE_AGENT_TYPESAFE_API_KEY"]
+    endpoint = os.getenv(
+        "PE_AGENT_TYPESAFE_BASE_URL", "https://api.typesafe.ai/v1/systemone"
+    )
     request = DecisionRequest(
         state={
             "synthetic": True,

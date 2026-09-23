@@ -4,14 +4,14 @@ This runbook separates local contract proof, customer discovery, shadow operatio
 
 ## Profiles
 
-| Profile | Platform data | Decision adapter | Archive | Intended use |
-|---|---|---|---|---|
-| `mock-recorded` | synthetic fixture | recorded | off | default local/static verification; no external service |
-| `mock-live-jev` | synthetic fixture | live approved model endpoint | off | model integration verification |
-| `platform-shadow` | customer platform, read-only | live approved model endpoint | off | non-user-visible comparison and evidence collection |
-| `platform-production` | customer platform, read-only | live approved model endpoint | off by default | controlled user pilot; archive separately enabled after approval |
+| Profile | Platform data | Decision adapter | Explanation layer | Archive | Intended use |
+|---|---|---|---|---|---|
+| `mock-recorded` | synthetic fixture | recorded | disabled | off | default local/static verification; no external service |
+| `mock-live-jev` | synthetic fixture | live approved model endpoint | disabled | off | model integration verification |
+| `platform-shadow` | customer platform, read-only | live approved model endpoint | disabled | off | non-user-visible comparison and evidence collection |
+| `platform-production` | customer platform, read-only | live approved model endpoint | disabled | off by default | controlled user pilot; archive separately enabled after approval |
 
-Checked-in `.invalid.example` origins and synthetic passwords are non-routable placeholders. Supply all real origins and secrets through the customer's secret/configuration system; never edit them into manifests.
+Checked-in `.invalid.example` origins and synthetic passwords are non-routable placeholders. Supply all real origins and secrets through the customer's secret/configuration system; never edit them into manifests. The optional explanation layer uses `PE_AGENT_EXPLANATION_PROFILE=openai_compatible` plus `PE_AGENT_LLM_BASE_URL`, `PE_AGENT_LLM_MODEL`, and runtime-only `PE_AGENT_LLM_API_KEY`; it is not a Jev fallback and must remain disabled until data-egress and quality approvals are complete.
 
 ## Preflight and static checks
 
@@ -28,7 +28,7 @@ For a real shadow/production preflight, override placeholder origins and inject 
 
 ## Local Compose
 
-Use the base file plus exactly one explicit override. Supply the matching profile file explicitly; Compose does not load `deploy/profiles/*.env` automatically. Export runtime-only secrets (for example `PE_AGENT_TYPESAFE_API_KEY`) through the approved secret mechanism before starting a live profile.
+Use the base file plus exactly one explicit override. Supply the matching profile file explicitly; Compose does not load `deploy/profiles/*.env` automatically. Export runtime-only secrets (for example `PE_AGENT_TYPESAFE_API_KEY` or, only for an approved expression experiment, `PE_AGENT_LLM_API_KEY`) through the approved secret mechanism before starting a live profile.
 
 ```sh
 docker compose --env-file deploy/profiles/mock-recorded.env -f deploy/compose.yaml -f deploy/compose.mock-recorded.yaml up --build

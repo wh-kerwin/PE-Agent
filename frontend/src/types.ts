@@ -164,6 +164,14 @@ export interface AnalysisReport {
   similarCases: Array<{ caseId: string; similarityReason: string; evidenceId: string }>
   recommendations: Recommendation[]
   uncertainties: Array<{ uncertaintyId: string; description: string; impact: string; relatedEvidenceIds: string[] }>
+  expression?: {
+    provider: 'openai-compatible'
+    requestedModel: string
+    resolvedModel: string
+    text: string
+    nonAuthoritative: true
+    usage: { inputTokens: number; outputTokens: number; latencyMs: number }
+  }
 }
 
 export interface EngineerReviewInput {

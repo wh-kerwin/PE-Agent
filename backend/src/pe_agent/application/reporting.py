@@ -23,7 +23,9 @@ from pe_agent.domain import (
 )
 
 _CAUSAL_CLAIM = re.compile(
-    r"\bconfirmed root cause\b|\b(?:is|was|were) caused by\b",
+    r"\bconfirmed root cause\b|\broot cause\s+(?:is|was|were)\b|"
+    r"\b(?:is|was|were)\s+caused by\b|\b(?:due to|because|therefore)\b|"
+    r"根因|由于|因此|导致",
     re.IGNORECASE,
 )
 
@@ -145,6 +147,27 @@ def compose_report(report_input: ReportInput) -> ReportOutcome:
     )
     status = TaskStatus.PARTIAL_RESULT if partial else TaskStatus.COMPLETED
     return ReportOutcome(report, status)
+
+
+def attach_expression(
+    outcome: ReportOutcome,
+    *,
+    expression: dict[str, Any],
+) -> ReportOutcome:
+    if outcome.report is None:
+        return outcome
+    text = expression.get("text")
+    if not isinstance(text, str) or _CAUSAL_CLAIM.search(text):
+        return outcome
+    report = dict(outcome.report)
+    report["expression"] = expression
+    errors = [
+        f"schema {list(error.absolute_path)}: {error.message}"
+        for error in _validator().iter_errors(report)
+    ]
+    if errors:
+        return outcome
+    return ReportOutcome(report, outcome.terminal_status, outcome.validation_errors)
 
 
 def validate_report(

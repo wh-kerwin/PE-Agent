@@ -34,7 +34,7 @@ export async function installCaseAnalysisRoutes(page: Page, scenario: Scenario) 
     if (path.endsWith('/report')) return json(route, demoReport)
 
     if (method === 'POST' && path === '/api/ai/case-analysis') {
-      return json(route, { taskId: demoReport.taskId, caseId: demoReport.caseSnapshot.caseId, caseVersion: '17', status: 'CREATED', reused: false, streamUrl: `/api/ai/case-analysis/${demoReport.taskId}/stream` }, 202)
+      return json(route, { taskId: demoReport.taskId, caseId: demoReport.caseSnapshot.caseId, caseVersion: demoReport.caseSnapshot.caseVersion, status: 'CREATED', reused: false, streamUrl: `/api/ai/case-analysis/${demoReport.taskId}/stream` }, 202)
     }
     if (method === 'GET' && url.searchParams.get('latest') === 'true') {
       latestCalls += 1

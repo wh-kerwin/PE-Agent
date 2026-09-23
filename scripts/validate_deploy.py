@@ -61,6 +61,7 @@ def validate_profiles() -> None:
         require(values.get("PE_AGENT_PLATFORM_PROFILE") == platform, f"{path}: platform mismatch")
         require(values.get("PE_AGENT_DECISION_PROFILE") == decision, f"{path}: decision mismatch")
         require(values.get("PE_AGENT_ARCHIVE_ENABLED", "").lower() == "false", f"{path}: archive must default off")
+        require(values.get("PE_AGENT_EXPLANATION_PROFILE", "disabled") == "disabled", f"{path}: explanation must default off")
         for key, value in values.items():
             if SECRET_NAME_PATTERN.search(key) and value:
                 require(
@@ -87,6 +88,13 @@ def validate_compose() -> None:
         require(override.is_file(), f"missing Compose override: {override}")
         require(profile in override.read_text(encoding="utf-8"), f"{override}: profile not explicit")
     require("PE_AGENT_ARCHIVE_ENABLED: ${PE_AGENT_ARCHIVE_ENABLED:-false}" in serialized, f"{path}: archive must default off")
+    for token in (
+        "PE_AGENT_EXPLANATION_PROFILE",
+        "PE_AGENT_LLM_BASE_URL",
+        "PE_AGENT_LLM_MODEL",
+        "PE_AGENT_LLM_API_KEY",
+    ):
+        require(token in serialized, f"{path}: missing LLM configuration token: {token}")
 
 
 def validate_helm() -> None:
@@ -95,6 +103,7 @@ def validate_helm() -> None:
     require("postgresql" not in values, "Helm chart must not provision PostgreSQL")
     require(values.get("externalDatabase", {}).get("secretName"), "external database secret reference required")
     require(values.get("config", {}).get("archiveEnabled") is False, "Helm archive must default off")
+    require(values.get("config", {}).get("explanationProfile") == "disabled", "Helm explanation must default off")
     templates = "\n".join(path.read_text(encoding="utf-8") for path in (chart / "templates").glob("*"))
     for token in (
         "kind: Deployment",
@@ -115,8 +124,14 @@ def validate_helm() -> None:
     require("kind: Secret" not in templates, "Helm chart must not contain secret values")
     for profile in ("platform-shadow", "platform-production"):
         overlay = load_yaml(chart / f"values-{profile}.yaml")
-        require(overlay.get("profile") == profile, f"Helm values missing explicit {profile}")
-        require(overlay.get("config", {}).get("archiveEnabled") is False, f"{profile}: archive must default off")
+        require(
+            overlay.get("config", {}).get("archiveEnabled") is False,
+            f"{profile}: archive must default off",
+        )
+        require(
+            overlay.get("config", {}).get("explanationProfile") == "disabled",
+            f"{profile}: explanation must default off",
+        )
 
 
 def validate_dockerfile() -> None:

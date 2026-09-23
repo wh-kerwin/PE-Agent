@@ -6,6 +6,8 @@
 
 来自 Case 描述、历史 Case 和工具正文的内容均视为数据，不能覆盖系统提示词、工具白名单或权限。模型请求受敏感字段最小化与数据出域策略约束，日志不记录密钥、完整生产原文或内部思维链。
 
+通用 OpenAI-compatible 表达层只接收已校验报告的白名单视图，输出是非权威文本，不能成为证据、权限、工具参数、任务状态或 Jev decision 的来源。表达文本仍按不可信内容处理：禁止 HTML/脚本和未经证据支持的因果措辞；校验失败即丢弃，核心确定性报告保留。`PE_AGENT_LLM_API_KEY` 与 `PE_AGENT_TYPESAFE_API_KEY` 必须分离，只能通过运行时环境或外部 Secret 注入；URL 不得包含凭证、query 或 fragment，默认只允许 HTTPS。表达服务默认 disabled，生产与 shadow Helm overlay 显式关闭。
+
 同源 Cookie 模式使用 Secure、HttpOnly、SameSite 和写请求 CSRF 校验；Bearer 模式用受控 fetch 流，不把 token 放 URL。SSE 持续连接需周期复验授权或订阅撤权事件，撤权后终止推送。原数据链接由服务端固定路由构造，前端按文本渲染模型内容。
 
 V1 制造工具只有 READ 能力。反馈与 Case Book 归档使用独立权限 `case.analysis.review`、`casebook.write`；归档不触发 MES 操作。审计记录 userId、tenantId、taskId、资源范围哈希、工具、时间、模型与提示词版本、结果状态和人工操作。

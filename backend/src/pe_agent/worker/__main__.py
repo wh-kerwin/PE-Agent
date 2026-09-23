@@ -8,12 +8,13 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from pe_agent.adapters.decisions import RecordedDecisionAdapter, TypeSafeDecisionAdapter
+from pe_agent.adapters.explanations import OpenAICompatibleExplanationAdapter
 from pe_agent.adapters.mock_platform import MockPlatformAdapter
 from pe_agent.adapters.persistence.session import create_engine, create_session_factory
 from pe_agent.adapters.platform.template import AdapterNotConfiguredError
 from pe_agent.application.yield_drop_workflow import YieldDropWorkflow
 from pe_agent.config import Settings, get_settings
-from pe_agent.ports import DecisionPort, PlatformDataPort
+from pe_agent.ports import DecisionPort, ExplanationPort, PlatformDataPort
 from pe_agent.testing import load_scenario
 from pe_agent.worker.service import SqlWorkerCoordinator, WorkerRunner
 
@@ -37,6 +38,7 @@ def _build_runner(settings: Settings, engine: AsyncEngine) -> WorkerRunner:
         SqlWorkerCoordinator(create_session_factory(engine)),
         YieldDropWorkflow(platform),
         decision,
+        explanation_port=_build_explanation(settings),
         lease_duration=timedelta(seconds=settings.worker_lease_seconds),
         task_timeout=timedelta(seconds=settings.worker_task_timeout_seconds),
     )
@@ -60,6 +62,22 @@ def _build_decision(settings: Settings) -> DecisionPort:
         )
     recording = _recording_path(settings)
     return RecordedDecisionAdapter((recording,))
+
+
+def _build_explanation(settings: Settings) -> ExplanationPort | None:
+    if settings.explanation_profile == "disabled":
+        return None
+    if settings.llm_base_url is None or settings.llm_model is None or settings.llm_api_key is None:
+        raise AdapterNotConfiguredError("OpenAI-compatible explanation adapter")
+    return OpenAICompatibleExplanationAdapter(
+        base_url=settings.llm_base_url,
+        model=settings.llm_model,
+        api_key=settings.llm_api_key,
+        timeout_seconds=settings.llm_timeout_seconds,
+        max_attempts=settings.llm_max_attempts,
+        max_backoff_seconds=settings.llm_max_backoff_seconds,
+        max_tokens=settings.llm_max_tokens,
+    )
 
 
 def _recording_path(settings: Settings) -> Path:

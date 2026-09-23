@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from pe_agent.adapters.mock_platform import MockPlatformAdapter
-from pe_agent.application.reporting import compose_report, validate_report
+from pe_agent.application.reporting import attach_expression, compose_report, validate_report
 from pe_agent.application.yield_drop_workflow import WorkflowCollection, YieldDropWorkflow
 from pe_agent.domain import (
     DecisionAnswer,
@@ -18,6 +18,7 @@ from pe_agent.domain import (
     EntityReference,
     EntityType,
     ReportInput,
+    ReportOutcome,
     TaskStatus,
 )
 from pe_agent.testing import load_scenario
@@ -374,5 +375,42 @@ async def test_unauthorized_wafer_reference_fails_closed() -> None:
     assert any("unauthorized entity" in error for error in outcome.validation_errors)
 
 
-def test_packaged_schema_matches_authoritative_schema() -> None:
+def test_expression_rejects_unverified_causal_language() -> None:
+    outcome = ReportOutcome(
+        {"schemaVersion": "1.0.0"},
+        TaskStatus.COMPLETED,
+    )
+
+    for text in (
+        "The root cause is chamber pressure.",
+        "The loss occurred due to chamber pressure.",
+        "因此该参数导致良率下降。",
+    ):
+        assert attach_expression(
+            outcome,
+            expression={"text": text},
+        ) == outcome
+
+
+def test_expression_is_attached_only_as_non_authoritative_schema_data() -> None:
+    outcome = ReportOutcome(
+        {"schemaVersion": "1.0.0"},
+        TaskStatus.COMPLETED,
+    )
+
+    attached = attach_expression(
+        outcome,
+        expression={
+            "provider": "openai-compatible",
+            "requestedModel": "synthetic-model",
+            "resolvedModel": "synthetic-model",
+            "text": "Review the cited observations.",
+            "nonAuthoritative": True,
+            "usage": {"inputTokens": 1, "outputTokens": 2, "latencyMs": 3},
+        },
+    )
+
+    assert attached == outcome
+
+
     assert PACKAGED_SCHEMA.read_bytes() == AUTHORITATIVE_SCHEMA.read_bytes()

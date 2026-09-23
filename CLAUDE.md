@@ -61,7 +61,7 @@ npm --prefix frontend run dev
 ```sh
 python scripts/validate_deploy.py
 python scripts/preflight.py --profile mock-recorded
-python scripts/smoke_test.py --base-url http://localhost:8000 --case-id CASE-20260920-001
+python scripts/smoke_test.py --base-url http://localhost:8000 --case-id SYN-CASE-PRESSURE-001 --case-version 1
 
 docker compose --env-file deploy/profiles/mock-recorded.env \
   -f deploy/compose.yaml -f deploy/compose.mock-recorded.yaml config --quiet

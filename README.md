@@ -47,7 +47,7 @@ sequenceDiagram
 V1：Yield Drop、单 Agent、只读工具、可恢复 SSE、结构化报告、工程师复核和 Case Book 归档。
 V2：[多类型 Case 与交互调查](docs/01-product/PRD-V2.md)。V3：[审批后受控动作](docs/01-product/PRD-V3.md)。后两者是路线图。
 
-TypeSafe Jev 已按官方文档纳入设计：它用于 Choice / Score / Noul 原子判断，由代码控制调查与组装报告。当前仓库仍未配置 API Key 或实现适配器，不声称已经接入运行环境。
+TypeSafe Jev 已按官方文档纳入设计：它用于 Choice / Score / Noul 原子判断，由代码控制调查与组装报告。Jev 通过 `PE_AGENT_TYPESAFE_BASE_URL` 和运行时注入的 `PE_AGENT_TYPESAFE_API_KEY` 配置，live smoke 默认关闭。另有可选的 OpenAI-compatible 表达层：显式设置 `PE_AGENT_EXPLANATION_PROFILE=openai_compatible` 后，从 `PE_AGENT_LLM_BASE_URL`、`PE_AGENT_LLM_MODEL` 和运行时 `PE_AGENT_LLM_API_KEY` 调用非流式 `/v1/chat/completions`；它只能产生标记为非权威的 `expression` 文本，不能替代 Jev 或修改 canonical 报告。两种外部模型能力默认均不启用，配置存在不代表生产就绪。
 
 ## 一键合成演示
 
@@ -60,7 +60,7 @@ docker compose --env-file deploy/profiles/mock-recorded.env -f deploy/compose.ya
 启动后打开 `http://localhost:4173`，或执行只读 smoke test：
 
 ```sh
-python scripts/smoke_test.py --base-url http://localhost:8000 --case-id CASE-20260920-001
+python scripts/smoke_test.py --base-url http://localhost:8000 --case-id SYN-CASE-PRESSURE-001 --case-version 1
 ```
 
 完整流程、失败场景和清理命令见 [演示脚本](docs/integration/demo-script.md)。生产集成前必须阅读 [已知限制](docs/integration/known-limitations.md) 和 [FDE Runbook](docs/integration/fde-runbook.md)。
@@ -78,7 +78,7 @@ npm --prefix frontend run test:unit
 npm --prefix frontend run build
 ```
 
-Live TypeSafe smoke 默认跳过，仅在显式设置 `RUN_TYPESAFE_LIVE=1` 和 `TYPESAFE_API_KEY` 时运行。生产 profile 缺少平台适配器配置时会启动失败，绝不回落到 mock。
+Live TypeSafe smoke 默认跳过，仅在显式设置 `PE_AGENT_RUN_TYPESAFE_LIVE=1`、`PE_AGENT_TYPESAFE_BASE_URL` 和 `PE_AGENT_TYPESAFE_API_KEY` 时运行。生产 profile 缺少平台适配器配置时会启动失败，绝不回落到 mock。OpenAI-compatible 表达层默认关闭；不要把真实 key 写入 Compose profile、Helm values、镜像、日志或命令行历史。
 
 ## 本地资料校验
 

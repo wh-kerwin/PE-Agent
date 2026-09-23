@@ -54,4 +54,12 @@ flowchart LR
 
 如需自然语言解释，可由模板基于已校验字段生成。未来若增加生成式模型，它是独立适配器，只负责表达，不可改变 Jev 判断、证据关系或权限。
 
+## 可选 OpenAI-compatible 表达层
+
+通用 LLM 通过独立的 `ExplanationPort` 接入，仅消费已经通过 Schema 和语义校验的报告白名单视图。它使用 `PE_AGENT_EXPLANATION_PROFILE=openai_compatible` 显式启用，并从 `PE_AGENT_LLM_BASE_URL`、`PE_AGENT_LLM_MODEL`、`PE_AGENT_LLM_API_KEY` 读取配置；默认 `disabled`。
+
+表达结果位于报告的非权威 `expression` 命名空间，不能修改 Jev 的 `modelAssessment`、证据、权限、任务状态、review/archive 字段或 canonical 报告事实。表达请求失败时保留确定性报告，不把通用 LLM 当作 Jev fallback。当前实现只支持受限的非流式 `/v1/chat/completions` 文本响应；tools、function calling、streaming 和生产默认启用均不在范围内。
+
+该配置和 adapter 的存在不代表生产就绪。真实数据出域、供应商合同/ZDR、质量、容量、网络出口和人工评估仍需完成。
+
 实现配置见 [model-profile.json](../../agent/model-profile.json)，问题模板见 [jev-questions.json](../../agent/jev-questions.json)。上线前通过真实账号 `GET /v1/models` 记录可用别名和响应版本。

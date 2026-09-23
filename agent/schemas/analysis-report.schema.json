@@ -328,6 +328,49 @@
         }
       }
     },
+    "expression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "requestedModel",
+        "resolvedModel",
+        "text",
+        "nonAuthoritative",
+        "usage"
+      ],
+      "properties": {
+        "provider": {
+          "const": "openai-compatible"
+        },
+        "requestedModel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvedModel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12000
+        },
+        "nonAuthoritative": {
+          "const": true
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inputTokens", "outputTokens", "latencyMs"],
+          "properties": {
+            "inputTokens": {"type": "integer", "minimum": 0},
+            "outputTokens": {"type": "integer", "minimum": 0},
+            "latencyMs": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
     "uncertainties": {
       "type": "array",
       "items": {
