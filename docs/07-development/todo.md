@@ -22,6 +22,8 @@
 - [x] Compose、Helm、非 root 容器、CI、preflight 与 contract/deployment validation
 - [x] 安全回归：scope hash 服务端派生、禁止权限范围扩张、生产 fail-closed
 - [x] 独立 OpenAI-compatible 表达层 adapter、环境变量配置、非权威 expression schema 与默认关闭部署校验
+- [x] Windows/MSYS 路径转换修复（`load_scenario` 路径回退）、worker 加入 `edge` 网络（DNS/出站）、TypeSafe legend 契约兼容（`_canonical_label` 归一）
+- [x] 报告确定性文案 CJK 化（标题/概览/假设/缺失证据/建议/时间线/关联/不确定性）、场景 fixture 观测/warning 中文化、mock_platform 错误文案中文化
 
 ## 待完成或受阻
 

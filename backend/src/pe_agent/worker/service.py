@@ -271,7 +271,7 @@ def _decision_request(
             "evidenceIds": [item["evidenceId"] for item in normalized],
             "evidenceSummaries": normalized,
             "hypothesis": (
-                "Chamber-pressure observations may be associated with the yield loss"
+                "腔体压力（CHAMBER_PRESSURE）观测异常可能关联本次良率下降"
             ),
             "synthetic": synthetic,
         },
@@ -280,14 +280,14 @@ def _decision_request(
                 question_id="pressure_drift_support",
                 primitive=DecisionPrimitive.SCORE,
                 instructions=(
-                    "How strongly does the supplied evidence support the named hypothesis? "
-                    "Evaluate support only; do not claim causation or select tools."
+                    "评估现有证据对上述假设的支持强度；"
+                    "仅评估支持度，不要推断因果或选择工具。"
                 ),
                 criteria=(
-                    "INSUFFICIENT: evidence is missing or unusable",
-                    "WEAK: little support or stronger contradictions",
-                    "MIXED: meaningful support and contradiction",
-                    "STRONG: multiple supporting observations with no material contradiction",
+                    "INSUFFICIENT：证据缺失或不可用",
+                    "WEAK：支持度低或存在更强反证",
+                    "MIXED：支持度与反证并存且均有分量",
+                    "STRONG：多条独立证据支持且无实质反证",
                 ),
             ),
         ),

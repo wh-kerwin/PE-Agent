@@ -183,7 +183,7 @@ async def test_historical_mismatch_is_an_uncertainty_not_support() -> None:
         for item in outcome.report[section]
     )
     assert any(
-        "No history matched" in item["description"]
+        "未检索到同工艺步骤与 recipe 的历史案例" in item["description"]
         for item in outcome.report["uncertainties"]
     )
 
@@ -318,7 +318,7 @@ async def test_missing_decision_is_explicitly_partial() -> None:
     assert outcome.report is not None
     assert outcome.report["hypotheses"] == []
     assert any(
-        item["description"] == "Model assessment was unavailable."
+        item["description"] == "模型评估不可用。"
         for item in outcome.report["uncertainties"]
     )
 

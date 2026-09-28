@@ -92,13 +92,21 @@ def normalize_typesafe_answer(
             or score_value > len(question.criteria) - 1
         ):
             raise DecisionResponseError("score is outside the requested rubric")
-        legend = _require_mapping(answer_payload.get("legend"), "legend")
-        expected_legend = {
-            str(index): criterion.split(":", 1)[0].strip()
-            for index, criterion in enumerate(question.criteria)
-        }
-        if legend != expected_legend:
-            raise DecisionResponseError("score legend does not match requested criteria")
+        legend = answer_payload.get("legend")
+        if legend is not None:
+            legend = _require_mapping(legend, "legend")
+            # Real Jev echoes back the full criterion strings; the recorded
+            # fixtures use short labels (text before the first ":").
+            # Accept either form, keyed by rubric index.
+            expected_legend = {
+                str(index): _canonical_label(criterion)
+                for index, criterion in enumerate(question.criteria)
+            }
+            actual_labels = {
+                str(index): _canonical_label(str(value)) for index, value in legend.items()
+            }
+            if actual_labels != expected_legend:
+                raise DecisionResponseError("score legend does not match requested criteria")
         answer = score_value
 
     return DecisionAnswer(
@@ -176,6 +184,16 @@ def _require_mapping(value: object, name: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
         raise DecisionResponseError(f"{name} must be an object")
     return value
+
+
+def _canonical_label(criterion: str) -> str:
+    """Collapse a criterion to its label so full and short legend forms compare equal.
+
+    Real Jev echoes the full criterion string back in the legend; the recorded
+    fixtures use the short label (text before the first ':'). Both are valid
+    representations of the same rubric entry.
+    """
+    return criterion.split(":", 1)[0].strip()
 
 
 def _require_probability(value: object, name: str) -> float:

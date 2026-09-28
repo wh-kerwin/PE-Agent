@@ -49,6 +49,12 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+  # 中文文案使用全角标点（，。（）：）是符合 CJK 排版规范的，RUF001 误报
+  "RUF001",
+  "RUF002",
+  "RUF003",
+]
 
 [tool.mypy]
 python_version = "3.12"

@@ -25,6 +25,8 @@
 - SSE：字符串 cursor、有限 replay、heartbeat、terminal close、周期性身份复核。
 - 安全边界：RequestScope 来自验证身份；scope hash 服务端派生；禁止从 Case 数据扩张授权范围；production 无身份适配器时 fail-closed。
 - Compose、Helm、非 root 容器、CI、preflight、contract validation、deployment validation。
+- 已修复 Windows/MSYS 路径转换导致容器内 fixture 不可读（`load_scenario` 路径回退）、`internal` 网络无 DNS 导致 Jev/LLM 超时（worker 加入 `edge` 网络）、TypeSafe legend 契约校验不匹配（`_canonical_label` 归一）。
+- 报告文案 CJK 化：标题/概览/假设/缺失证据/建议/时间线/关联/不确定性等确定性报告文案、`mock_platform` 错误文案、场景 fixture 观测/warning 均改为中文；`questions.py` legend 校验兼容完整 criteria 串与短标签两种格式。
 - PostgreSQL 生命周期 CHECK 约束及并发/租约/回滚集成测试。
 - 工程师复核表单 hydration、任务切换、report 切换和状态相关字段提交边界。
 - TODO 细项同步维护于 [docs/07-development/todo.md](docs/07-development/todo.md)。

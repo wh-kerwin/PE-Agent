@@ -50,10 +50,9 @@ def compose_report(report_input: ReportInput) -> ReportOutcome:
         uncertainties.append(
             {
                 "uncertaintyId": f"U-{len(uncertainties) + 1:02d}",
-                "description": "Model assessment was unavailable.",
+                "description": "模型评估不可用。",
                 "impact": (
-                    "No model-scored hypothesis is included; an engineer must review the "
-                    "source observations directly."
+                    "未包含模型评分假设；工程人员需直接审阅源观测证据。"
                 ),
                 "relatedEvidenceIds": [item.evidence_id for item in current_evidence],
             }
@@ -76,7 +75,7 @@ def compose_report(report_input: ReportInput) -> ReportOutcome:
             "questionSetVersion": report_input.question_set_version,
         },
         "summary": {
-            "title": f"Yield drop analysis for {case.case_id}",
+            "title": f"良率下降分析（{case.case_id}）",
             "overview": _overview(current_evidence, uncertainties),
             "severity": case.severity.value,
         },
@@ -335,9 +334,9 @@ def _uncertainties(report_input: ReportInput) -> list[dict[str, Any]]:
     for result in report_input.results:
         evidence_ids = tuple(item.evidence_id for item in result.evidence)
         if result.status is ToolStatus.FAILED:
-            candidates.append((f"{result.tool_id} was unavailable", evidence_ids))
+            candidates.append((f"{result.tool_id} 数据源不可用", evidence_ids))
         elif result.status is ToolStatus.PARTIAL:
-            candidates.append((f"{result.tool_id} returned partial data", evidence_ids))
+            candidates.append((f"{result.tool_id} 返回了部分数据", evidence_ids))
         candidates.extend((warning, evidence_ids) for warning in result.quality.warnings)
         for item in result.evidence:
             candidates.extend(
@@ -345,11 +344,11 @@ def _uncertainties(report_input: ReportInput) -> list[dict[str, Any]]:
             )
             if item.quality is EvidenceQuality.PARTIAL:
                 candidates.append(
-                    (f"{result.tool_id} contains partial evidence", (item.evidence_id,))
+                    (f"{result.tool_id} 包含部分证据", (item.evidence_id,))
                 )
             elif item.quality is EvidenceQuality.CONFLICTING:
                 candidates.append(
-                    (f"{result.tool_id} conflicts with another source", evidence_ids)
+                    (f"{result.tool_id} 与其他数据源存在冲突", evidence_ids)
                 )
     unique = list(dict.fromkeys(candidates))
     return [
@@ -357,8 +356,7 @@ def _uncertainties(report_input: ReportInput) -> list[dict[str, Any]]:
             "uncertaintyId": f"U-{index:02d}",
             "description": description,
             "impact": (
-                "An engineer must verify this gap before relying on the related "
-                "interpretation."
+                "工程人员在依赖相关推断前，必须先确认该数据缺口。"
             ),
             "relatedEvidenceIds": list(evidence_ids),
         }
@@ -377,9 +375,9 @@ def _correlations(evidence: tuple[Evidence, ...]) -> list[dict[str, Any]]:
             "correlationId": "C-01",
             "type": "TEMPORAL",
             "description": (
-                "The cited process observations occurred within the analyzed case window."
+                "上述工艺观测发生在本案例分析时间窗口内。"
             ),
-            "evidenceIds": [item.evidence_id for item in process],
+            "evidenceIds": [item.evidence_id for item in evidence],
         }
     ]
 
@@ -393,7 +391,7 @@ def _hypotheses(
         item
         for item in evidence
         if item.kind in {EvidenceKind.SPC, EvidenceKind.FDC}
-        and "pressure" in item.observation.lower()
+        and ("腔体压力" in item.observation or "chamber pressure" in item.observation.lower())
     ]
     supporting = [
         item for item in pressure if item.quality is not EvidenceQuality.CONFLICTING
@@ -418,13 +416,13 @@ def _hypotheses(
     return [
         {
             "hypothesisId": "H-01",
-            "title": "Chamber-pressure observations may be associated with the yield loss",
+            "title": "腔体压力（CHAMBER_PRESSURE）观测异常可能关联本次良率下降",
             "confidenceLevel": confidence_level,
             "supportingEvidenceIds": [item.evidence_id for item in supporting],
             "contradictingEvidenceIds": [
                 item.evidence_id for item in contradicting
             ],
-            "missingEvidence": ["Engineer verification of the suspected pressure path"],
+            "missingEvidence": ["工程人员需确认疑似压力异常路径（工具校准/工艺参数）"],
             "modelAssessment": {
                 "questionId": assessment.question_id,
                 "primitive": assessment.primitive.value,
@@ -456,8 +454,7 @@ def _similar_cases(
                         {
                             "caseId": case_id,
                             "similarityReason": (
-                                "The adapter returned this resolved case as a match; it is "
-                                "context only."
+                                "数据源将该历史案例返回为相似匹配，仅供参考。"
                             ),
                             "evidenceId": item.evidence_id,
                         }
@@ -470,11 +467,11 @@ def _recommendations(evidence: tuple[Evidence, ...]) -> list[dict[str, Any]]:
     for item in evidence:
         grouped.setdefault(item.kind, []).append(item.evidence_id)
     templates = {
-        EvidenceKind.SPC: "Review the cited SPC rule and its active control limits.",
-        EvidenceKind.FDC: "Verify the cited sensor trend and calibration status.",
-        EvidenceKind.RECIPE: "Compare the cited recipe snapshot with the approved version.",
-        EvidenceKind.YIELD: "Compare the next authorized run with the same yield baseline.",
-        EvidenceKind.TOOL_EVENT: "Review the cited tool events with equipment engineering.",
+        EvidenceKind.SPC: "复核上述 SPC 控制规则及当前管控限（UCL/LCL）设置。",
+        EvidenceKind.FDC: "确认 FDC 传感器趋势与标定状态，排除计量系统漂移。",
+        EvidenceKind.RECIPE: "对比当前 recipe 快照与已批准的正式版本。",
+        EvidenceKind.YIELD: "对比下一批次（同良率基线）的运行结果以验证趋势。",
+        EvidenceKind.TOOL_EVENT: "联合设备工程复核工具事件日志。",
     }
     values: list[dict[str, Any]] = []
     for kind, action in templates.items():
@@ -487,7 +484,7 @@ def _recommendations(evidence: tuple[Evidence, ...]) -> list[dict[str, Any]]:
                         "FOLLOW_UP" if kind is EvidenceKind.YIELD else "INVESTIGATION"
                     ),
                     "action": action,
-                    "reason": "This action checks an observation from the current case.",
+                    "reason": "该建议基于本案例中的观测证据生成。",
                     "evidenceIds": evidence_ids,
                     "requiresEngineerDecision": True,
                 }
@@ -498,18 +495,28 @@ def _recommendations(evidence: tuple[Evidence, ...]) -> list[dict[str, Any]]:
 def _overview(
     evidence: tuple[Evidence, ...], uncertainties: list[dict[str, Any]]
 ) -> str:
-    base = f"The report contains {len(evidence)} current, source-linked observations."
+    base = f"本报告包含 {len(evidence)} 条当前可溯源的观测证据。"
     if uncertainties:
-        return f"{base} Material gaps or conflicts remain for engineering review."
-    return f"{base} Interpretations remain subject to engineering verification."
+        return f"{base} 仍存在材料性数据缺口或冲突，需工程评审确认。"
+    return f"{base} 相关推断仍待工程验证。"
+
+
+_KIND_ZH = {
+    "YIELD": "良率",
+    "SPC": "SPC 控制",
+    "FDC": "FDC 趋势",
+    "TOOL_EVENT": "工具事件",
+    "RECIPE": "Recipe",
+    "HISTORICAL_CASE": "历史案例",
+}
 
 
 def _timeline_title(item: Evidence) -> str:
-    return f"{item.kind.value.replace('_', ' ').title()} observation recorded"
+    return f"{_KIND_ZH.get(item.kind.value, item.kind.value)} 观测已记录"
 
 
 def _finding_title(item: Evidence) -> str:
-    return f"Observed {item.kind.value.replace('_', ' ').lower()} evidence"
+    return f"观测项：{_KIND_ZH.get(item.kind.value, item.kind.value)} 证据"
 
 
 def _references(report: dict[str, Any]) -> set[str]:

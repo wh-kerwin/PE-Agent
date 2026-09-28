@@ -20,7 +20,7 @@
       "completeness": 1.0,
       "evidence": [{
         "evidenceId": "EV-YIELD-HISTORY", "kind": "YIELD",
-        "observation": "Synthetic lot yield was 84.0% against a 92.0% matched baseline.",
+        "observation": "晶圆批次良率为 84.0%，低于同批次基线 92.0%，良率下降 8 个百分点。",
         "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-HISTORY"},
         "entityRefs": [{"type": "LOT", "id": "SYN-LOT-HISTORY"}],
         "eventTime": "2026-09-20T07:55:00Z", "retrievedAt": "2026-09-20T08:01:00Z",
@@ -31,7 +31,7 @@
       "status": "PARTIAL", "requiredPermission": "casebook.read",
       "data": {"caseIds": [], "excluded": [{"caseId": "SYN-HIST-01", "reason": "process-step-mismatch"}]},
       "source": {"system": "SYNTHETIC_CASE_BOOK", "recordIds": ["SYN-HIST-01"]},
-      "completeness": 0.5, "warnings": ["No history matched process step and recipe"],
+      "completeness": 0.5, "warnings": ["未检索到同工艺步骤与 recipe 的历史案例"],
       "evidence": []
     }
   }

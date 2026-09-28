@@ -17,30 +17,30 @@
       "status": "SUCCEEDED", "requiredPermission": "spc.read",
       "data": {"parameter": "CHAMBER_PRESSURE", "ruleViolation": true},
       "source": {"system": "SYNTHETIC_SPC", "recordIds": ["SYN-SPC-CONFLICT"]},
-      "completeness": 1.0, "warnings": ["Conflicts with FDC trend"],
+      "completeness": 1.0, "warnings": ["与 FDC 趋势数据冲突"],
       "evidence": [{
         "evidenceId": "EV-SPC-CONFLICT", "kind": "SPC",
-        "observation": "Synthetic SPC indicates a chamber-pressure rule violation.",
+        "observation": "SPC 检测到腔体压力（CHAMBER_PRESSURE）违反当前控制规则。",
         "source": {"system": "SYNTHETIC_SPC", "sourceId": "SYN-SPC-CONFLICT"},
         "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-03"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
         "eventTime": "2026-09-20T02:45:00Z", "retrievedAt": "2026-09-20T03:01:00Z",
         "quality": "CONFLICTING", "rawRef": "/api/ai/source-links/EV-SPC-CONFLICT",
-        "warnings": ["Conflicts with FDC trend"]
+        "warnings": ["与 FDC 趋势数据冲突"]
       }]
     },
     "get_fdc_evidence": {
       "status": "SUCCEEDED", "requiredPermission": "fdc.read",
       "data": {"parameter": "CHAMBER_PRESSURE", "driftPercent": null},
       "source": {"system": "SYNTHETIC_FDC", "recordIds": ["SYN-FDC-CONFLICT"]},
-      "completeness": 1.0, "warnings": ["Conflicts with SPC violation"],
+      "completeness": 1.0, "warnings": ["与 SPC 控制规则冲突"],
       "evidence": [{
         "evidenceId": "EV-FDC-CONFLICT", "kind": "FDC",
-        "observation": "Synthetic FDC has no trustworthy drift value for the same pressure interval.",
+        "observation": "FDC 在同一压力观测窗口内未返回可信漂移值。",
         "source": {"system": "SYNTHETIC_FDC", "sourceId": "SYN-FDC-CONFLICT"},
         "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-03"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
         "eventTime": "2026-09-20T02:45:00Z", "retrievedAt": "2026-09-20T03:01:01Z",
         "quality": "CONFLICTING", "rawRef": "/api/ai/source-links/EV-FDC-CONFLICT",
-        "warnings": ["Conflicts with SPC violation"]
+        "warnings": ["与 SPC 控制规则冲突"]
       }]
     }
   }

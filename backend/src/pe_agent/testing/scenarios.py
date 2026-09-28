@@ -149,10 +149,21 @@ class Scenario(DomainModel):
                 raise ValueError(f"unsupported fixture tool {tool_id}")
 
 
-def load_scenario(path: Path) -> Scenario:
-    """Load a strictly validated synthetic scenario from disk."""
-    try:
-        payload = path.read_text(encoding="utf-8")
-        return Scenario.model_validate_json(payload)
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"invalid scenario fixture {path}: {exc}") from exc
+def load_scenario(path: str | Path) -> Scenario:
+    """Load a strictly validated synthetic scenario from a container-resilient path."""
+    candidates = [Path(path)]
+    name = Path(path).name
+    if name:
+        candidates.append(Path("/app/fixtures") / name)
+        candidates.append(Path("/app/decisions") / name)
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            payload = candidate.read_text(encoding="utf-8")
+            return Scenario.model_validate_json(payload)
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"{candidate}: {exc}")
+    raise ValueError(
+        f"invalid scenario fixture {path}: tried {len(candidates)} candidates; "
+        + "; ".join(errors)
+    )

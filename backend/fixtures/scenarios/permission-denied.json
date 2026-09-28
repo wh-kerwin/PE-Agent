@@ -15,7 +15,7 @@
   "toolResults": {
     "get_fdc_evidence": {
       "status": "FAILED", "requiredPermission": "fdc.read", "completeness": 0.0,
-      "warnings": ["Synthetic permission denial"], "errorCode": "PERMISSION_DENIED",
+      "warnings": ["权限不足（合成数据）"], "errorCode": "PERMISSION_DENIED",
       "retryable": false, "evidence": []
     }
   }

@@ -15,12 +15,12 @@
   "toolResults": {
     "get_lot_yield": {
       "status": "FAILED", "requiredPermission": "yield.read", "completeness": 0.0,
-      "warnings": ["Synthetic source unavailable"], "errorCode": "UNAVAILABLE", "retryable": true,
+      "warnings": ["数据源不可用（合成数据）"], "errorCode": "UNAVAILABLE", "retryable": true,
       "evidence": []
     },
     "get_spc_evidence": {
       "status": "FAILED", "requiredPermission": "spc.read", "completeness": 0.0,
-      "warnings": ["Synthetic source unavailable"], "errorCode": "UNAVAILABLE", "retryable": true,
+      "warnings": ["数据源不可用（合成数据）"], "errorCode": "UNAVAILABLE", "retryable": true,
       "evidence": []
     }
   }

@@ -193,7 +193,7 @@ class MockPlatformAdapter(PlatformDataPort):
                 call,
                 now,
                 ToolErrorCode.TIMEOUT,
-                "tool deadline elapsed",
+                "工具调用已超时",
                 retryable=True,
             )
 
@@ -203,7 +203,7 @@ class MockPlatformAdapter(PlatformDataPort):
                 call,
                 now,
                 ToolErrorCode.INVALID_ARGUMENTS,
-                "tool is not present in the scenario",
+                "该工具在当前场景中没有定义",
                 retryable=False,
             )
 

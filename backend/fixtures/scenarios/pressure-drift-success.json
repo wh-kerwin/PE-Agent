@@ -32,7 +32,7 @@
       "evidence": [{
         "evidenceId": "EV-YIELD-001",
         "kind": "YIELD",
-        "observation": "Synthetic lot yield was 82.0% against a 96.0% matched baseline.",
+        "observation": "晶圆批次良率为 82.0%，低于同批次基线 96.0%，良率下降 14 个百分点。",
         "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-001"},
         "entityRefs": [{"type": "LOT", "id": "SYN-LOT-001"}],
         "eventTime": "2026-09-20T01:31:00Z",
@@ -50,7 +50,7 @@
       "evidence": [{
         "evidenceId": "EV-SPC-001",
         "kind": "SPC",
-        "observation": "Synthetic chamber pressure exceeded its active control limit.",
+        "observation": "SPC 检测到腔体压力（CHAMBER_PRESSURE）超出当前管控限（UCL）。",
         "source": {"system": "SYNTHETIC_SPC", "sourceId": "SYN-SPC-001"},
         "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-01"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
         "eventTime": "2026-09-20T01:23:00Z",
@@ -68,7 +68,7 @@
       "evidence": [{
         "evidenceId": "EV-FDC-001",
         "kind": "FDC",
-        "observation": "Synthetic chamber pressure drifted 8.2% above the matched run median.",
+        "observation": "FDC 显示腔体压力（CHAMBER_PRESSURE）漂移 +8.2%，高于同周期运行中位数。",
         "source": {"system": "SYNTHETIC_FDC", "sourceId": "SYN-FDC-001"},
         "entityRefs": [{"type": "TOOL", "id": "SYN-TOOL-01"}, {"type": "PARAMETER", "id": "CHAMBER_PRESSURE"}],
         "eventTime": "2026-09-20T01:18:00Z",
