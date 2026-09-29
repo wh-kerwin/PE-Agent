@@ -45,6 +45,13 @@ class WorkItem:
     schema_version: str
 
 
+@dataclass(frozen=True)
+class AnalysisResult:
+    outcome: ReportOutcome
+    collection: WorkflowCollection | None
+    decision: DecisionResult | None
+
+
 class WorkerCoordinator(Protocol):
     async def claim(self, now: datetime, lease_duration: timedelta) -> WorkItem | None: ...
 
@@ -53,6 +60,9 @@ class WorkerCoordinator(Protocol):
         work: WorkItem,
         outcome: ReportOutcome,
         now: datetime,
+        *,
+        tool_results: tuple[object, ...] = (),
+        decision: object | None = None,
     ) -> bool: ...
 
 
@@ -84,6 +94,9 @@ class SqlWorkerCoordinator:
         work: WorkItem,
         outcome: ReportOutcome,
         now: datetime,
+        *,
+        tool_results: tuple[object, ...] = (),
+        decision: object | None = None,
     ) -> bool:
         async with self._session_factory.begin() as session:
             return await TaskRepository(session).finalize(
@@ -96,6 +109,8 @@ class SqlWorkerCoordinator:
                 report_version=1,
                 schema_version=work.schema_version,
                 errors=outcome.validation_errors,
+                tool_results=tool_results,
+                decision=decision,
             )
 
 
@@ -127,10 +142,10 @@ class WorkerRunner:
         work = await self._coordinator.claim(self._now(), self._lease_duration)
         if work is None:
             return False
+        analysis: AnalysisResult | None = None
         try:
             async with asyncio.timeout(self._task_timeout.total_seconds()):
-                collection = await self._collect(work)
-                outcome = await self._analyze(work, collection)
+                analysis = await self._analyze_full(work)
         except TimeoutError:
             outcome = ReportOutcome(
                 None,
@@ -144,8 +159,23 @@ class WorkerRunner:
                 TaskStatus.FAILED,
                 ("ANALYSIS_FAILED",),
             )
-        await self._coordinator.finalize(work, outcome, self._now())
+        else:
+            outcome = analysis.outcome
+        tool_results = analysis.collection.results if analysis and analysis.collection else ()
+        decision = analysis.decision if analysis else None
+        await self._coordinator.finalize(
+            work,
+            outcome,
+            self._now(),
+            tool_results=tool_results,
+            decision=decision,
+        )
         return True
+
+    async def _analyze_full(self, work: WorkItem) -> AnalysisResult:
+        collection = await self._collect(work)
+        outcome, decision = await self._analyze(work, collection)
+        return AnalysisResult(outcome=outcome, collection=collection, decision=decision)
 
     async def _collect(self, work: WorkItem) -> WorkflowCollection:
         return await self._workflow.collect(
@@ -161,7 +191,7 @@ class WorkerRunner:
         self,
         work: WorkItem,
         collection: WorkflowCollection,
-    ) -> ReportOutcome:
+    ) -> tuple[ReportOutcome, DecisionResult | None]:
         current_evidence = tuple(
             item
             for result in collection.results
@@ -195,7 +225,7 @@ class WorkerRunner:
             )
         )
         if outcome.report is None or self._explanation_port is None:
-            return outcome
+            return outcome, decision
         try:
             explanation = await self._explanation_port.explain(
                 ExplanationRequest(
@@ -205,24 +235,27 @@ class WorkerRunner:
             )
         except ExplanationError as exc:
             LOGGER.warning("explanation_unavailable error_type=%s", type(exc).__name__)
-            return outcome
+            return outcome, decision
         except Exception as exc:
             LOGGER.error("explanation_unavailable error_type=%s", type(exc).__name__)
-            return outcome
-        return attach_expression(
-            outcome,
-            expression={
-                "provider": "openai-compatible",
-                "requestedModel": explanation.requested_model,
-                "resolvedModel": explanation.resolved_model,
-                "text": explanation.text,
-                "nonAuthoritative": True,
-                "usage": {
-                    "inputTokens": explanation.input_tokens,
-                    "outputTokens": explanation.output_tokens,
-                    "latencyMs": explanation.latency_ms,
+            return outcome, decision
+        return (
+            attach_expression(
+                outcome,
+                expression={
+                    "provider": "openai-compatible",
+                    "requestedModel": explanation.requested_model,
+                    "resolvedModel": explanation.resolved_model,
+                    "text": explanation.text,
+                    "nonAuthoritative": True,
+                    "usage": {
+                        "inputTokens": explanation.input_tokens,
+                        "outputTokens": explanation.output_tokens,
+                        "latencyMs": explanation.latency_ms,
+                    },
                 },
-            },
+            ),
+            decision,
         )
 
     def _now(self) -> datetime:

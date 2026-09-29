@@ -41,7 +41,13 @@ class FakeCoordinator:
         return work
 
     async def finalize(
-        self, work: WorkItem, outcome: ReportOutcome, now: datetime
+        self,
+        work: WorkItem,
+        outcome: ReportOutcome,
+        now: datetime,
+        *,
+        tool_results: tuple[object, ...] = (),
+        decision: object | None = None,
     ) -> bool:
         self.finalizations.append((work, outcome, now))
         return self.accepts_finalize

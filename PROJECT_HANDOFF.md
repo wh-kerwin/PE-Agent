@@ -27,6 +27,7 @@
 - Compose、Helm、非 root 容器、CI、preflight、contract validation、deployment validation。
 - 已修复 Windows/MSYS 路径转换导致容器内 fixture 不可读（`load_scenario` 路径回退）、`internal` 网络无 DNS 导致 Jev/LLM 超时（worker 加入 `edge` 网络）、TypeSafe legend 契约校验不匹配（`_canonical_label` 归一）。
 - 报告文案 CJK 化：标题/概览/假设/缺失证据/建议/时间线/关联/不确定性等确定性报告文案、`mock_platform` 错误文案、场景 fixture 观测/warning 均改为中文；`questions.py` legend 校验兼容完整 criteria 串与短标签两种格式。
+- 持久化审计写路径：`TaskRepository.finalize` 在写报告/事件的同一事务内落 `ai_tool_execution`、`ai_evidence`、`ai_model_assessment` 三张审计表（此前仅建表无写入）；新增 `ToolExecutionRepository`/`EvidenceRepository`/`ModelAssessmentRepository`；worker `WorkerCoordinator.finalize` 协议扩展 `tool_results`/`decision` 入参，`_analyze` 返回 `(outcome, decision)`。
 - PostgreSQL 生命周期 CHECK 约束及并发/租约/回滚集成测试。
 - 工程师复核表单 hydration、任务切换、report 切换和状态相关字段提交边界。
 - TODO 细项同步维护于 [docs/07-development/todo.md](docs/07-development/todo.md)。
@@ -35,7 +36,7 @@
 
 最近一次完整后端验证：
 
-- `146 passed, 16 skipped`；跳过的是 Docker 不可用时的 PostgreSQL 集成测试和默认关闭的 live TypeSafe smoke。
+- `167 passed, 1 skipped`；跳过的是 Docker 不可用时的 PostgreSQL 集成测试和默认关闭的 live TypeSafe smoke。本轮新增 5 个审计持久化集成测试（tool execution / evidence / model assessment 写路径）。
 - Ruff 通过。
 - strict mypy 通过，49 个源文件。
 - Contract validation 通过。

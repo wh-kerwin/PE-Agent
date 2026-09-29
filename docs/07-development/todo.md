@@ -34,6 +34,11 @@
 - [ ] TypeSafe 企业条款、数据区域/ZDR、实际 API key/账号与 live 验收
 - [ ] OpenAI-compatible 表达层的企业出域、质量、容量和生产启用评审（当前 adapter 仅为默认关闭的实验性能力）
 - [ ] 持久化 tool execution 审计、normalized Evidence、model assessment 元数据
+
+## 已完成
+
+- [x] 持久化 tool execution 审计、normalized Evidence、model assessment 元数据
+  - 三张审计表（`ai_tool_execution`/`ai_evidence`/`ai_model_assessment`）此前仅建表无写入；现 `TaskRepository.finalize` 在写报告/事件同一事务内落表，`worker` 传 `tool_results`/`decision` 入参，5 个集成测试覆盖写路径
 - [ ] worker lease renewal/checkpoint resume 与 SIGTERM/已安装 wheel 运行验收
 - [ ] 黄金集、CJK/故障/越权扩展测试和 shadow pilot
 

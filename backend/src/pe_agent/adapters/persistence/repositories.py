@@ -15,9 +15,12 @@ from pe_agent.adapters.persistence.models import (
     AnalysisTaskModel,
     CaseBookArchiveModel,
     EngineerReviewModel,
+    EvidenceModel,
+    ModelAssessmentModel,
     OutboxModel,
     ReportModel,
     TaskEventModel,
+    ToolExecutionModel,
 )
 
 TERMINAL_STATUSES = {"COMPLETED", "PARTIAL_RESULT", "FAILED", "TIMEOUT", "CANCELLED"}
@@ -425,6 +428,8 @@ class TaskRepository:
         report_version: int,
         schema_version: str,
         errors: tuple[str, ...] = (),
+        tool_results: tuple[Any, ...] = (),
+        decision: Any | None = None,
     ) -> bool:
         if status not in TERMINAL_STATUSES - {"CANCELLED"}:
             raise ValueError("worker finalization requires a worker terminal status")
@@ -474,8 +479,116 @@ class TaskRepository:
             await self.append_event(lease.task_id, "report_generated", payload, now)
         elif errors:
             payload = {"errorCodes": list(errors)}
+        await self._persist_tool_executions(lease.task_id, tool_results, now)
+        await self._persist_evidence(lease.task_id, tool_results)
+        if decision is not None:
+            await self._persist_model_assessment(
+                lease.task_id, decision, now
+            )
         await self.append_event(lease.task_id, event_type, payload, now)
         return True
+
+    async def _persist_tool_executions(
+        self,
+        task_id: str,
+        tool_results: tuple[Any, ...],
+        now: datetime,
+    ) -> None:
+        repository = ToolExecutionRepository(self._session)
+        for result in tool_results:
+            args = _tool_args_hash_input(result)
+            execution_id = str(uuid4())
+            error_code = (
+                result.error.code.value if result.error is not None else None
+            )
+            latency_ms: int | None = None
+            source_version = (
+                result.source.adapter_version if result.source is not None else None
+            )
+            await repository.add(
+                execution_id=execution_id,
+                task_id=task_id,
+                tool_id=result.tool_id,
+                args=args,
+                attempt=1,
+                status=result.status.value,
+                source_version=source_version,
+                latency_ms=latency_ms,
+                result=result.data if result.data is not None else None,
+                error_code=error_code,
+            )
+
+    async def _persist_evidence(
+        self,
+        task_id: str,
+        tool_results: tuple[Any, ...],
+    ) -> None:
+        rows: list[dict[str, Any]] = []
+        for result in tool_results:
+            for evidence in result.evidence:
+                rows.append(
+                    {
+                        "id": evidence.evidence_id,
+                        "kind": evidence.kind.value,
+                        "observation_json": evidence.observation,
+                        "source_json": {
+                            "system": evidence.source.system,
+                            "sourceId": evidence.source.source_id,
+                        },
+                        "entity_refs": [
+                            {"type": ref.type.value, "id": ref.id}
+                            for ref in evidence.entity_refs
+                        ],
+                        "event_time": evidence.event_time,
+                        "retrieved_at": evidence.retrieved_at,
+                        "quality_json": {
+                            "quality": evidence.quality.value,
+                            "warnings": list(evidence.warnings),
+                        },
+                        "raw_ref": evidence.raw_ref,
+                    }
+                )
+        if rows:
+            await EvidenceRepository(self._session).add_many(task_id, rows)
+
+    async def _persist_model_assessment(
+        self,
+        task_id: str,
+        decision: Any,
+        now: datetime,
+    ) -> None:
+        question_version = decision.question_set_version
+        for answer in decision.answers:
+            assessment_id = str(uuid4())
+            state = {
+                "question_id": answer.question_id,
+                "question_version": question_version,
+                "requested_model": decision.requested_model,
+            }
+            answer_payload = {
+                "question_id": answer.question_id,
+                "primitive": answer.primitive.value,
+                "answer": answer.answer,
+                "distribution": answer.distribution,
+                "confidence": answer.confidence,
+            }
+            usage_payload = {
+                "input_tokens": decision.usage.input_tokens,
+                "output_tokens": decision.usage.output_tokens,
+                "latency_ms": decision.usage.latency_ms,
+            }
+            await ModelAssessmentRepository(self._session).add(
+                assessment_id=assessment_id,
+                task_id=task_id,
+                question_id=answer.question_id,
+                question_version=question_version,
+                primitive=answer.primitive.value,
+                state=state,
+                answer=answer_payload,
+                requested_model=decision.requested_model,
+                resolved_model=decision.resolved_model,
+                usage=usage_payload,
+            )
 
 
 class ReportRepository:
@@ -650,3 +763,128 @@ class CaseBookArchiveRepository:
         self._session.add(archive)
         await self._session.flush()
         return archive
+
+
+def _stable_hash(value: object) -> str:
+    """SHA-256 hex of a canonically serialized value, stable across calls."""
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _tool_args_hash_input(result: Any) -> dict[str, Any]:
+    """Reconstruct the canonical tool-call identifier for auditing purposes.
+
+    ToolExecution.args_hash captures *which* call was made (tool id + status
+    + source version + result hash) rather than the raw request arguments,
+    which may contain sensitive data.
+    """
+    return {
+        "tool_id": result.tool_id,
+        "status": result.status.value,
+        "source_version": (
+            result.source.adapter_version if result.source is not None else None
+        ),
+    }
+
+
+class ToolExecutionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(
+        self,
+        *,
+        execution_id: str,
+        task_id: str,
+        tool_id: str,
+        args: dict[str, Any],
+        attempt: int,
+        status: str,
+        source_version: str | None,
+        latency_ms: int | None,
+        result: dict[str, Any] | None,
+        error_code: str | None,
+    ) -> ToolExecutionModel:
+        result_json = json.dumps(result, sort_keys=True, separators=(",", ":"), default=str)
+        execution = ToolExecutionModel(
+            id=execution_id,
+            task_id=task_id,
+            tool_id=tool_id,
+            args_hash=_stable_hash(args),
+            attempt=attempt,
+            status=status,
+            source_version=source_version,
+            latency_ms=latency_ms,
+            result_ref=(
+                f"ai_tool_execution:{task_id}:{tool_id}:{attempt}"
+                if result is not None
+                else None
+            ),
+            result_hash=_stable_hash(result_json) if result is not None else None,
+            error_code=error_code,
+        )
+        self._session.add(execution)
+        await self._session.flush()
+        return execution
+
+
+class EvidenceRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add_many(
+        self,
+        task_id: str,
+        rows: list[dict[str, Any]],
+    ) -> None:
+        for row in rows:
+            self._session.add(
+                EvidenceModel(
+                    id=row["id"],
+                    task_id=task_id,
+                    kind=row["kind"],
+                    observation_json=row["observation_json"],
+                    source_json=row["source_json"],
+                    entity_refs=row["entity_refs"],
+                    event_time=row["event_time"],
+                    retrieved_at=row["retrieved_at"],
+                    quality_json=row["quality_json"],
+                    raw_ref=row["raw_ref"],
+                )
+            )
+        await self._session.flush()
+
+
+class ModelAssessmentRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(
+        self,
+        *,
+        assessment_id: str,
+        task_id: str,
+        question_id: str,
+        question_version: str,
+        primitive: str,
+        state: dict[str, Any],
+        answer: dict[str, Any],
+        requested_model: str,
+        resolved_model: str,
+        usage: dict[str, Any],
+    ) -> ModelAssessmentModel:
+        assessment = ModelAssessmentModel(
+            id=assessment_id,
+            task_id=task_id,
+            question_id=question_id,
+            question_version=question_version,
+            primitive=primitive,
+            state_hash=_stable_hash(state),
+            answer_json=answer,
+            requested_model=requested_model,
+            resolved_model=resolved_model,
+            usage_json=usage,
+        )
+        self._session.add(assessment)
+        await self._session.flush()
+        return assessment

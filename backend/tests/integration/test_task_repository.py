@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 import docker
@@ -18,9 +19,12 @@ from pe_agent.adapters.persistence.models import (
     Base,
     CaseBookArchiveModel,
     EngineerReviewModel,
+    EvidenceModel,
+    ModelAssessmentModel,
     OutboxModel,
     ReportModel,
     TaskEventModel,
+    ToolExecutionModel,
 )
 from pe_agent.adapters.persistence.repositories import (
     NewTask,
@@ -38,6 +42,12 @@ from pe_agent.application.task_service import (
     ReviewRevisionConflictError,
     ReviewValidationError,
     TaskService,
+)
+from pe_agent.domain import (
+    DecisionAnswer,
+    DecisionPrimitive,
+    DecisionResult,
+    DecisionUsage,
 )
 
 pytestmark = [
@@ -654,3 +664,240 @@ async def test_stream_batch_rejects_ahead_and_expired_cursors(
     batch = await service.stream_batch(after_sequence=1, **arguments)
     assert [event.sequence for event in batch.events] == [2, 3]
     assert batch.latest_sequence == 3
+
+
+# ------------------------------------------------------------------
+# Audit persistence: tool execution, evidence, model assessment
+# ------------------------------------------------------------------
+
+
+def _synthetic_decision() -> DecisionResult:
+    return DecisionResult(
+        requested_model="jev-1.13.0",
+        resolved_model="jev-1.13.0",
+        question_set_version="yield-drop-jev-v1.0.0",
+        answers=(
+            DecisionAnswer(
+                question_id="pressure_drift_support",
+                primitive=DecisionPrimitive.SCORE,
+                answer=2.72,
+                distribution={"INSUFFICIENT": 0.01, "WEAK": 0.04, "MIXED": 0.17, "STRONG": 0.78},
+                confidence=0.71,
+            ),
+        ),
+        usage=DecisionUsage(input_tokens=10, output_tokens=5, latency_ms=1200),
+    )
+
+
+def _synthetic_tool_result() -> Any:
+    from pe_agent.domain import ToolQuality, ToolResult, ToolSource, ToolStatus
+    from pe_agent.domain.enums import EntityType, EvidenceKind
+    from pe_agent.domain.evidence import (
+        EntityReference,
+        Evidence,
+        EvidenceQuality,
+        EvidenceSource,
+    )
+
+    ev = Evidence(
+        evidence_id="EV-YIELD-AUDIT",
+        kind=EvidenceKind.YIELD,
+        observation="Yield 82.0% vs baseline 96.0%",
+        source=EvidenceSource(system="SYNTHETIC_YIELD", source_id="SYN-YLD-AUDIT"),
+        entity_refs=(EntityReference(type=EntityType.LOT, id="SYN-LOT-AUDIT"),),
+        event_time=datetime.now(UTC),
+        retrieved_at=datetime.now(UTC),
+        quality=EvidenceQuality.VERIFIED,
+        raw_ref="/api/ai/source-links/EV-YIELD-AUDIT",
+    )
+    return ToolResult(
+        tool_call_id="CALL-AUDIT",
+        tool_id="get_lot_yield",
+        status=ToolStatus.SUCCEEDED,
+        data={"observedPercent": 82.0, "baselinePercent": 96.0},
+        source=ToolSource(
+            system="SYNTHETIC_YIELD",
+            record_ids=("SYN-YLD-AUDIT",),
+            adapter_version="1.0.0",
+        ),
+        quality=ToolQuality(completeness=1.0),
+        retrieved_at=datetime.now(UTC),
+        evidence=(ev,),
+    )
+
+
+async def test_finalize_persists_tool_executions(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    tool_result = _synthetic_tool_result()
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-AUDIT-TOOL")
+        lease = await TaskRepository(session).claim(datetime.now(UTC), timedelta(seconds=10))
+        assert lease is not None
+        now = datetime.now(UTC)
+        assert await TaskRepository(session).finalize(
+            lease,
+            expected_statuses={"CREATED"},
+            status="COMPLETED",
+            phase="compose_and_validate_report",
+            now=now,
+            report={"synthetic": True},
+            report_version=1,
+            schema_version="1.0.0",
+            tool_results=(tool_result,),
+        )
+
+    async with session_factory.begin() as session:
+        rows = list(
+            await session.scalars(
+                select(ToolExecutionModel).where(
+                    ToolExecutionModel.task_id == task.id
+                )
+            )
+        )
+        assert len(rows) == 1
+        assert rows[0].tool_id == "get_lot_yield"
+        assert rows[0].status == "SUCCEEDED"
+        assert rows[0].source_version == "1.0.0"
+        assert rows[0].args_hash is not None
+        assert rows[0].result_hash is not None
+        assert rows[0].error_code is None
+
+
+async def test_finalize_persists_evidence(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    tool_result = _synthetic_tool_result()
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-AUDIT-EVID")
+        lease = await TaskRepository(session).claim(datetime.now(UTC), timedelta(seconds=10))
+        assert lease is not None
+        now = datetime.now(UTC)
+        assert await TaskRepository(session).finalize(
+            lease,
+            expected_statuses={"CREATED"},
+            status="COMPLETED",
+            phase="compose_and_validate_report",
+            now=now,
+            report={"synthetic": True},
+            report_version=1,
+            schema_version="1.0.0",
+            tool_results=(tool_result,),
+        )
+
+    async with session_factory.begin() as session:
+        rows = list(
+            await session.scalars(
+                select(EvidenceModel).where(EvidenceModel.task_id == task.id)
+            )
+        )
+        assert len(rows) == 1
+        assert rows[0].kind == "YIELD"
+        assert rows[0].observation_json == "Yield 82.0% vs baseline 96.0%"
+        assert rows[0].quality_json == {"quality": "VERIFIED", "warnings": []}
+
+
+async def test_finalize_persists_model_assessment(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    decision = _synthetic_decision()
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-AUDIT-MODEL")
+        lease = await TaskRepository(session).claim(datetime.now(UTC), timedelta(seconds=10))
+        assert lease is not None
+        now = datetime.now(UTC)
+        assert await TaskRepository(session).finalize(
+            lease,
+            expected_statuses={"CREATED"},
+            status="COMPLETED",
+            phase="compose_and_validate_report",
+            now=now,
+            report={"synthetic": True},
+            report_version=1,
+            schema_version="1.0.0",
+            decision=decision,
+        )
+
+    async with session_factory.begin() as session:
+        rows = list(
+            await session.scalars(
+                select(ModelAssessmentModel).where(
+                    ModelAssessmentModel.task_id == task.id
+                )
+            )
+        )
+        assert len(rows) == 1
+        assert rows[0].question_id == "pressure_drift_support"
+        assert rows[0].question_version == "yield-drop-jev-v1.0.0"
+        assert rows[0].primitive == "score"
+        assert rows[0].resolved_model == "jev-1.13.0"
+        assert rows[0].state_hash is not None
+        assert rows[0].usage_json["input_tokens"] == 10
+
+
+async def test_finalize_without_decision_does_not_write_model_assessment(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    tool_result = _synthetic_tool_result()
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-AUDIT-NO-DECISION")
+        lease = await TaskRepository(session).claim(datetime.now(UTC), timedelta(seconds=10))
+        assert lease is not None
+        now = datetime.now(UTC)
+        assert await TaskRepository(session).finalize(
+            lease,
+            expected_statuses={"CREATED"},
+            status="PARTIAL_RESULT",
+            phase="compose_and_validate_report",
+            now=now,
+            report={"synthetic": True},
+            report_version=1,
+            schema_version="1.0.0",
+            tool_results=(tool_result,),
+            decision=None,
+        )
+
+    async with session_factory.begin() as session:
+        count = await session.scalar(
+            select(func.count()).select_from(ModelAssessmentModel).where(
+                ModelAssessmentModel.task_id == task.id
+            )
+        )
+        assert count == 0
+        tool_count = await session.scalar(
+            select(func.count()).select_from(ToolExecutionModel).where(
+                ToolExecutionModel.task_id == task.id
+            )
+        )
+        assert tool_count == 1
+
+
+async def test_finalize_failed_task_persists_tool_executions_without_report(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    tool_result = _synthetic_tool_result()
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-AUDIT-FAILED")
+        lease = await TaskRepository(session).claim(datetime.now(UTC), timedelta(seconds=10))
+        assert lease is not None
+        now = datetime.now(UTC)
+        assert await TaskRepository(session).finalize(
+            lease,
+            expected_statuses={"CREATED"},
+            status="FAILED",
+            phase="compose_and_validate_report",
+            now=now,
+            report=None,
+            report_version=1,
+            schema_version="1.0.0",
+            errors=("ANALYSIS_FAILED",),
+            tool_results=(tool_result,),
+        )
+
+    async with session_factory.begin() as session:
+        tool_count = await session.scalar(
+            select(func.count()).select_from(ToolExecutionModel).where(
+                ToolExecutionModel.task_id == task.id
+            )
+        )
+        assert tool_count == 1
