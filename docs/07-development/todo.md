@@ -29,7 +29,7 @@
 
 - [x] 前端依赖安装后的 typecheck、unit test、build 与 Playwright E2E（8 个 unit test、3 个 E2E 通过）
 - [x] 实际 Compose `mock-live-jev` image build/up、Nginx 非 root/read-only/tmpfs、前端 200 与 API health 验收
-- [ ] Helm CLI lint/template 与 clean-checkout smoke test
+- [x] Helm CLI lint/template 与 clean-checkout smoke test（helm v3.16.4 安装 + 3 profile lint/template + compose config/validate_deploy/preflight 全通过）
 - [ ] 宿主 Case API、SSO/IAM、制造平台只读 adapters 与真实 Case Book adapter
 - [ ] TypeSafe 企业条款、数据区域/ZDR、实际 API key/账号与 live 验收
 - [ ] OpenAI-compatible 表达层的企业出域、质量、容量和生产启用评审（当前 adapter 仅为默认关闭的实验性能力）
