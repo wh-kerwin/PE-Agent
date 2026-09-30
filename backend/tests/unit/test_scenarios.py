@@ -18,14 +18,16 @@ EXPECTED_NAMES = {
     "version-conflict",
     "permission-denied",
     "history-mismatch",
+    "cross-tenant-access",
+    "multi-source-timeout",
 }
 
 
-def test_all_eight_synthetic_scenarios_validate() -> None:
+def test_all_synthetic_scenarios_validate() -> None:
     fixtures = sorted(FIXTURE_DIR.glob("*.json"))
     scenarios = [load_scenario(path) for path in fixtures]
 
-    assert len(scenarios) == 8
+    assert len(scenarios) == len(EXPECTED_NAMES)
     assert {scenario.name for scenario in scenarios} == EXPECTED_NAMES
     assert all(scenario.synthetic and scenario.case.synthetic for scenario in scenarios)
     assert all(scenario.permission_profile.name for scenario in scenarios)

@@ -1,0 +1,41 @@
+{
+  "name": "multi-source-timeout",
+  "synthetic": true,
+  "expectedOutcome": "PARTIAL_RESULT",
+  "unavailableSources": ["get_spc_evidence", "get_fdc_evidence"],
+  "evidenceIds": ["EV-YIELD-MULTI-TIMEOUT"],
+  "permissionProfile": {"name": "full-read", "permissions": ["case.read", "yield.read", "spc.read", "fdc.read"]},
+  "case": {
+    "caseId": "SYN-CASE-MULTI-TIMEOUT", "caseVersion": "1", "caseType": "YIELD_DROP",
+    "severity": "HIGH", "status": "OPEN", "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T09:00:00Z",
+    "lotIds": ["SYN-LOT-MULTI-TIMEOUT"], "toolIds": ["SYN-TOOL-MULTI-TIMEOUT"], "recipeIds": [],
+    "symptom": {"observedYieldPercent": 79.0, "baselineYieldPercent": 95.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "SUCCEEDED", "requiredPermission": "yield.read",
+      "data": {"observedPercent": 79.0, "baselinePercent": 95.0},
+      "source": {"system": "SYNTHETIC_YIELD", "recordIds": ["SYN-YLD-MULTI-TIMEOUT"]},
+      "completeness": 1.0,
+      "evidence": [{
+        "evidenceId": "EV-YIELD-MULTI-TIMEOUT", "kind": "YIELD",
+        "observation": "晶圆批次良率为 79.0%，低于同批次基线 95.0%，良率下降 16 个百分点。",
+        "source": {"system": "SYNTHETIC_YIELD", "sourceId": "SYN-YLD-MULTI-TIMEOUT"},
+        "entityRefs": [{"type": "LOT", "id": "SYN-LOT-MULTI-TIMEOUT"}],
+        "eventTime": "2026-09-20T08:55:00Z", "retrievedAt": "2026-09-20T09:01:00Z",
+        "quality": "VERIFIED", "rawRef": "/api/ai/source-links/EV-YIELD-MULTI-TIMEOUT"
+      }]
+    },
+    "get_spc_evidence": {
+      "status": "FAILED", "requiredPermission": "spc.read", "completeness": 0.0,
+      "warnings": ["SPC 数据源超时（合成数据）"], "errorCode": "TIMEOUT", "retryable": true,
+      "evidence": []
+    },
+    "get_fdc_evidence": {
+      "status": "FAILED", "requiredPermission": "fdc.read", "completeness": 0.0,
+      "warnings": ["FDC 数据源超时（合成数据）"], "errorCode": "TIMEOUT", "retryable": true,
+      "evidence": []
+    }
+  }
+}

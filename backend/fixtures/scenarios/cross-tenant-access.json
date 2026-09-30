@@ -1,0 +1,32 @@
+{
+  "name": "cross-tenant-access",
+  "synthetic": true,
+  "expectedOutcome": "CASE_ACCESS_DENIED",
+  "unavailableSources": ["get_lot_yield", "get_spc_evidence", "get_fdc_evidence"],
+  "evidenceIds": [],
+  "permissionProfile": {"name": "cross-tenant-deny", "permissions": ["case.read", "yield.read", "spc.read", "fdc.read"]},
+  "case": {
+    "caseId": "SYN-CASE-OTHER-TENANT", "caseVersion": "1", "caseType": "YIELD_DROP",
+    "severity": "HIGH", "status": "OPEN", "processStep": "SYNTHETIC_ETCH",
+    "createdAt": "2026-09-20T08:00:00Z",
+    "lotIds": ["SYN-LOT-OTHER-TENANT"], "toolIds": ["SYN-TOOL-OTHER-TENANT"], "recipeIds": [],
+    "symptom": {"observedYieldPercent": 78.0, "baselineYieldPercent": 96.0}, "synthetic": true
+  },
+  "toolResults": {
+    "get_lot_yield": {
+      "status": "FAILED", "requiredPermission": "yield.read", "completeness": 0.0,
+      "warnings": ["跨租户访问被拒绝（合成数据）"], "errorCode": "PERMISSION_DENIED",
+      "retryable": false, "evidence": []
+    },
+    "get_spc_evidence": {
+      "status": "FAILED", "requiredPermission": "spc.read", "completeness": 0.0,
+      "warnings": ["跨租户访问被拒绝（合成数据）"], "errorCode": "PERMISSION_DENIED",
+      "retryable": false, "evidence": []
+    },
+    "get_fdc_evidence": {
+      "status": "FAILED", "requiredPermission": "fdc.read", "completeness": 0.0,
+      "warnings": ["跨租户访问被拒绝（合成数据）"], "errorCode": "PERMISSION_DENIED",
+      "retryable": false, "evidence": []
+    }
+  }
+}
