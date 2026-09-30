@@ -41,6 +41,7 @@
   - 三张审计表（`ai_tool_execution`/`ai_evidence`/`ai_model_assessment`）此前仅建表无写入；现 `TaskRepository.finalize` 在写报告/事件同一事务内落表，`worker` 传 `tool_results`/`decision` 入参，5 个集成测试覆盖写路径
 - [ ] worker lease renewal/checkpoint resume 与 SIGTERM/已安装 wheel 运行验收
 - [ ] 黄金集、CJK/故障/越权扩展测试和 shadow pilot
+  - CJK/故障/越权测试已扩展（task 38）；shadow pilot 待真实平台接入后启动
 
 ## 已完成的设计资产
 
