@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import signal
 from contextlib import suppress
 from datetime import timedelta
 from pathlib import Path
@@ -18,17 +20,49 @@ from pe_agent.ports import DecisionPort, ExplanationPort, PlatformDataPort
 from pe_agent.testing import load_scenario
 from pe_agent.worker.service import SqlWorkerCoordinator, WorkerRunner
 
+LOGGER = logging.getLogger(__name__)
+
 
 async def run_worker(settings: Settings) -> None:
     engine = create_engine(settings.database_url)
+    stop_event = _install_signal_handlers()
     try:
         runner = _build_runner(settings, engine)
-        while True:
+        while not stop_event.is_set():
             processed = await runner.run_once()
             if not processed:
-                await asyncio.sleep(settings.worker_poll_seconds)
+                # Wait on the stop event with a timeout so a SIGTERM arriving
+                # between polls is picked up within one poll interval.
+                with suppress(TimeoutError):
+                    await asyncio.wait_for(
+                        stop_event.wait(),
+                        timeout=settings.worker_poll_seconds,
+                    )
+        LOGGER.info("worker stop signal received; draining")
     finally:
         await engine.dispose()
+
+
+def _install_signal_handlers() -> asyncio.Event:
+    """Register SIGTERM/SIGINT handlers that set a shared stop event.
+
+    Returns the event so tests can drive the stop path without relying on
+    delivering an OS signal. Falls back to signal.signal on platforms where
+    the asyncio loop cannot add a handler (Windows / non-main thread).
+    """
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    def _request_stop(*_args: object) -> None:
+        stop_event.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, _request_stop)
+        except (NotImplementedError, RuntimeError):
+            with suppress(ValueError):
+                signal.signal(sig, _request_stop)
+    return stop_event
 
 
 def _build_runner(settings: Settings, engine: AsyncEngine) -> WorkerRunner:

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     worker_poll_seconds: float = 2.0
     worker_lease_seconds: float = 60.0
     worker_task_timeout_seconds: float = 45.0
+    worker_graceful_shutdown_seconds: float = 10.0
     sse_poll_seconds: float = 0.5
     sse_heartbeat_seconds: float = 15.0
     sse_permission_recheck_seconds: float = 15.0
@@ -94,6 +95,7 @@ class Settings(BaseSettings):
             self.worker_poll_seconds,
             self.worker_lease_seconds,
             self.worker_task_timeout_seconds,
+            self.worker_graceful_shutdown_seconds,
             self.sse_poll_seconds,
             self.sse_heartbeat_seconds,
             self.sse_permission_recheck_seconds,
@@ -108,6 +110,8 @@ class Settings(BaseSettings):
             raise ValueError("worker lease and timeout must be positive")
         if self.worker_task_timeout_seconds >= self.worker_lease_seconds:
             raise ValueError("worker task timeout must be shorter than the lease")
+        if self.worker_graceful_shutdown_seconds <= 0.0:
+            raise ValueError("worker graceful shutdown window must be positive")
         if (
             self.sse_poll_seconds <= 0.0
             or self.sse_heartbeat_seconds <= 0.0

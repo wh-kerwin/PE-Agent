@@ -34,6 +34,8 @@ class FakeCoordinator:
         self.accepts_finalize = accepts_finalize
         self.claims: list[tuple[datetime, timedelta]] = []
         self.finalizations: list[tuple[WorkItem, ReportOutcome, datetime]] = []
+        self.renewals: list[tuple[WorkItem, datetime, timedelta]] = []
+        self.renew_fail_after: int | None = None
 
     async def claim(self, now: datetime, lease_duration: timedelta) -> WorkItem | None:
         self.claims.append((now, lease_duration))
@@ -51,6 +53,12 @@ class FakeCoordinator:
     ) -> bool:
         self.finalizations.append((work, outcome, now))
         return self.accepts_finalize
+
+    async def renew_lease(
+        self, work: WorkItem, now: datetime, lease_duration: timedelta
+    ) -> bool:
+        self.renewals.append((work, now, lease_duration))
+        return self.renew_fail_after is None or len(self.renewals) < self.renew_fail_after
 
 
 class CapturingDecisionPort:
@@ -147,6 +155,7 @@ def _runner(
     *,
     explanation_port: Any = None,
     task_timeout: timedelta = timedelta(seconds=45),
+    renewal_interval: timedelta | None = None,
 ) -> WorkerRunner:
     return WorkerRunner(
         coordinator,
@@ -156,6 +165,7 @@ def _runner(
         lease_duration=timedelta(seconds=60),
         task_timeout=task_timeout,
         clock=lambda: NOW,
+        renewal_interval=renewal_interval,
     )
 
 
@@ -305,4 +315,89 @@ async def test_stale_finalize_is_not_retried_without_a_new_claim() -> None:
     assert await _runner(coordinator, scenario, CapturingDecisionPort()).run_once()
 
     assert len(coordinator.claims) == 1
+    assert len(coordinator.finalizations) == 1
+
+
+# ------------------------------------------------------------------
+# Lease renewal during a long-running task
+# ------------------------------------------------------------------
+
+
+class SlowDecisionPort:
+    """Decides after a configurable delay so the renewal loop gets a chance to fire."""
+
+    def __init__(self, *, delay_seconds: float = 0.05) -> None:
+        self.delay_seconds = delay_seconds
+
+    async def decide(self, request: DecisionRequest) -> DecisionResult:
+        await asyncio.sleep(self.delay_seconds)
+        return DecisionResult(
+            requested_model=request.requested_model,
+            resolved_model=request.requested_model,
+            question_set_version=request.question_set_version,
+            answers=(
+                DecisionAnswer(
+                    question_id="pressure_drift_support",
+                    primitive=DecisionPrimitive.SCORE,
+                    answer=2.72,
+                    distribution={
+                        "0": 0.01,
+                        "1": 0.04,
+                        "2": 0.17,
+                        "3": 0.78,
+                    },
+                    confidence=0.71,
+                ),
+            ),
+            usage=DecisionUsage(input_tokens=10, output_tokens=5, latency_ms=1),
+        )
+
+
+@pytest.mark.asyncio
+async def test_lease_is_renewed_when_task_runs_past_renewal_interval() -> None:
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+
+    await _runner(
+        coordinator,
+        scenario,
+        SlowDecisionPort(delay_seconds=0.06),
+        renewal_interval=timedelta(milliseconds=5),
+    ).run_once()
+
+    assert len(coordinator.renewals) >= 1, "a slow task should trigger at least one renewal"
+
+
+@pytest.mark.asyncio
+async def test_no_renewal_when_task_finishes_immediately() -> None:
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+
+    await _runner(
+        coordinator,
+        scenario,
+        CapturingDecisionPort(),
+        renewal_interval=timedelta(seconds=30),
+    ).run_once()
+
+    # Fast decision + fast compose finishes before the first renewal tick.
+    assert coordinator.renewals == []
+
+
+@pytest.mark.asyncio
+async def test_lost_lease_does_not_crash_the_task() -> None:
+    """A renewal that returns False (superseded / terminal) must not break finalize."""
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+    coordinator.renew_fail_after = 1  # first renewal returns False
+
+    await _runner(
+        coordinator,
+        scenario,
+        SlowDecisionPort(delay_seconds=0.06),
+        renewal_interval=timedelta(milliseconds=5),
+    ).run_once()
+
+    # Even though the lease was lost, the worker still attempts finalize
+    # (the CAS in finalize will reject it if the lease truly lapsed).
     assert len(coordinator.finalizations) == 1

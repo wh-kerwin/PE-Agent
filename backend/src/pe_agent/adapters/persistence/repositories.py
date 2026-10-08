@@ -377,6 +377,35 @@ class TaskRepository:
         await self._session.flush()
         return Lease(task.id, task.lease_token, task.fence, task.lease_deadline)
 
+    async def renew_lease(
+        self,
+        lease: Lease,
+        now: datetime,
+        lease_duration: timedelta,
+    ) -> bool:
+        """Extend an active lease without advancing the fence.
+
+        Returns False when the lease can no longer be renewed — it was
+        superseded by another worker, already expired, or the task reached
+        a terminal status. The fence token is intentionally NOT advanced:
+        renewing the same lease keeps the fence so the worker can still
+        finalize atomically.
+        """
+        result = await self._session.execute(
+            update(AnalysisTaskModel)
+            .where(
+                AnalysisTaskModel.id == lease.task_id,
+                AnalysisTaskModel.lease_token == lease.token,
+                AnalysisTaskModel.fence == lease.fence,
+                ~AnalysisTaskModel.status.in_(TERMINAL_STATUSES),
+            )
+            .values(
+                lease_deadline=now + lease_duration,
+                updated_at=now,
+            )
+        )
+        return getattr(result, "rowcount", 0) == 1
+
     async def transition(
         self,
         lease: Lease,

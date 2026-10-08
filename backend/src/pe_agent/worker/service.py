@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -65,6 +66,16 @@ class WorkerCoordinator(Protocol):
         decision: object | None = None,
     ) -> bool: ...
 
+    async def renew_lease(
+        self,
+        work: WorkItem,
+        now: datetime,
+        lease_duration: timedelta,
+    ) -> bool:
+        """Extend the active lease. Returns False if the lease can no longer be
+        renewed (e.g. it already expired or was superseded by another worker)."""
+        ...
+
 
 class SqlWorkerCoordinator:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -87,6 +98,17 @@ class SqlWorkerCoordinator:
                 case_version=task.case_version,
                 model_version=task.model_version,
                 schema_version=task.schema_version,
+            )
+
+    async def renew_lease(
+        self,
+        work: WorkItem,
+        now: datetime,
+        lease_duration: timedelta,
+    ) -> bool:
+        async with self._session_factory.begin() as session:
+            return await TaskRepository(session).renew_lease(
+                work.lease, now, lease_duration
             )
 
     async def finalize(
@@ -125,6 +147,7 @@ class WorkerRunner:
         lease_duration: timedelta = timedelta(seconds=60),
         task_timeout: timedelta = timedelta(seconds=45),
         clock: Clock | None = None,
+        renewal_interval: timedelta | None = None,
     ) -> None:
         if lease_duration.total_seconds() <= 0 or task_timeout.total_seconds() <= 0:
             raise ValueError("worker durations must be positive")
@@ -137,12 +160,18 @@ class WorkerRunner:
         self._lease_duration = lease_duration
         self._task_timeout = task_timeout
         self._clock = clock or (lambda: datetime.now(UTC))
+        # By default renew at half the lease so the lease never lapses while a
+        # task is in flight; callers (and tests) may override the cadence.
+        self._renewal_interval = renewal_interval or (lease_duration / 2)
 
     async def run_once(self) -> bool:
         work = await self._coordinator.claim(self._now(), self._lease_duration)
         if work is None:
             return False
         analysis: AnalysisResult | None = None
+        # Renew the lease periodically so a slow task (e.g. a slow LLM
+        # explanation) does not let its lease lapse before finalize.
+        renewer = self._renew_lease_loop(work, self._renewal_interval.total_seconds())
         try:
             async with asyncio.timeout(self._task_timeout.total_seconds()):
                 analysis = await self._analyze_full(work)
@@ -161,6 +190,10 @@ class WorkerRunner:
             )
         else:
             outcome = analysis.outcome
+        finally:
+            renewer.cancel()
+            with suppress(asyncio.CancelledError):
+                await renewer
         tool_results = analysis.collection.results if analysis and analysis.collection else ()
         decision = analysis.decision if analysis else None
         await self._coordinator.finalize(
@@ -171,6 +204,32 @@ class WorkerRunner:
             decision=decision,
         )
         return True
+
+    def _renew_lease_loop(
+        self, work: WorkItem, interval_seconds: float
+    ) -> asyncio.Task[None]:
+        async def _loop() -> None:
+            while True:
+                await asyncio.sleep(interval_seconds)
+                try:
+                    renewed = await self._coordinator.renew_lease(
+                        work, self._now(), self._lease_duration
+                    )
+                except Exception as exc:
+                    LOGGER.warning(
+                        "lease_renewal_failed task=%s error_type=%s",
+                        work.lease.task_id,
+                        type(exc).__name__,
+                    )
+                    continue
+                if not renewed:
+                    LOGGER.warning(
+                        "lease_lost task=%s (superseded or terminal)",
+                        work.lease.task_id,
+                    )
+                    return
+
+        return asyncio.ensure_future(_loop())
 
     async def _analyze_full(self, work: WorkItem) -> AnalysisResult:
         collection = await self._collect(work)
