@@ -19,6 +19,7 @@ from pe_agent.adapters.persistence.models import (
     ModelAssessmentModel,
     OutboxModel,
     ReportModel,
+    TaskCheckpointModel,
     TaskEventModel,
     ToolExecutionModel,
 )
@@ -792,6 +793,86 @@ class CaseBookArchiveRepository:
         self._session.add(archive)
         await self._session.flush()
         return archive
+
+
+# Stage labels used by the checkpoint table. Kept as module constants so the
+# worker and tests share one vocabulary.
+STAGE_COLLECTED = "collected"
+STAGE_DECIDED = "decided"
+
+
+class TaskCheckpointRepository:
+    """Durable intermediate state so a restarted worker can resume a task.
+
+    Each checkpoint row stores a fully serialized domain object (a
+    WorkflowCollection after collect, a DecisionResult after decision) plus
+    the lease fence that produced it. The fence ties a checkpoint to the
+    worker that wrote it so a stale resume is rejected on reload.
+
+    Payloads are stored as a JSON string (not a JSONB column) so that
+    domain objects serialized with model_dump(mode="json") round-trip
+    through model_validate_json, which accepts the enum/str coercion that
+    strict-mode model_validate would reject.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(
+        self,
+        *,
+        task_id: str,
+        stage: str,
+        payload: dict[str, Any],
+        fence: int,
+        now: datetime,
+    ) -> None:
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        checkpoint_id = f"{task_id}:{stage}"
+        statement = insert(TaskCheckpointModel).values(
+            id=checkpoint_id,
+            task_id=task_id,
+            stage=stage,
+            payload_json=canonical,
+            fence=fence,
+            created_at=now,
+        )
+        statement = statement.on_conflict_do_update(
+            index_elements=[TaskCheckpointModel.task_id, TaskCheckpointModel.stage],
+            set_={
+                "payload_json": canonical,
+                "fence": fence,
+            },
+        )
+        await self._session.execute(statement)
+        await self._session.flush()
+
+    async def load(
+        self,
+        task_id: str,
+        stage: str,
+    ) -> dict[str, Any] | None:
+        row = await self._session.scalar(
+            select(TaskCheckpointModel).where(
+                TaskCheckpointModel.task_id == task_id,
+                TaskCheckpointModel.stage == stage,
+            )
+        )
+        if row is None:
+            return None
+        try:
+            payload: Any = json.loads(row.payload_json)
+        except json.JSONDecodeError:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    async def latest_fence(self, task_id: str) -> int | None:
+        fence = await self._session.scalar(
+            select(func.max(TaskCheckpointModel.fence)).where(
+                TaskCheckpointModel.task_id == task_id
+            )
+        )
+        return int(fence) if fence is not None else None
 
 
 def _stable_hash(value: object) -> str:

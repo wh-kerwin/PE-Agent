@@ -213,3 +213,32 @@ class CaseBookArchiveModel(Base):
     error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class TaskCheckpointModel(Base):
+    """A single task's durable intermediate state, used for checkpoint resume.
+
+    The payload holds a complete serialized domain object (a
+    WorkflowCollection after the collect stage, a DecisionResult after the
+    decision stage) so a restarted worker can re-read it instead of redoing
+    the slow platform calls and model calls.
+    """
+
+    __tablename__ = "ai_task_checkpoint"
+    __table_args__ = (
+        UniqueConstraint("task_id", "stage", name="uq_checkpoint_task_stage"),
+        CheckConstraint(
+            "stage IN ('collected', 'decided')",
+            name="ck_checkpoint_stage",
+        ),
+        CheckConstraint("fence >= 0", name="ck_checkpoint_fence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    task_id: Mapped[str] = mapped_column(
+        ForeignKey("ai_analysis_task.id"), nullable=False, index=True
+    )
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    fence: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

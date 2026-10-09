@@ -6,12 +6,19 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Protocol
+from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from pe_agent.adapters.explanations import ExplanationError
-from pe_agent.adapters.persistence.repositories import ACTIVE_STATUSES, Lease, TaskRepository
+from pe_agent.adapters.persistence.repositories import (
+    ACTIVE_STATUSES,
+    STAGE_COLLECTED,
+    STAGE_DECIDED,
+    Lease,
+    TaskCheckpointRepository,
+    TaskRepository,
+)
 from pe_agent.application.reporting import attach_expression, compose_report
 from pe_agent.application.yield_drop_workflow import WorkflowCollection, YieldDropWorkflow
 from pe_agent.domain import (
@@ -76,6 +83,22 @@ class WorkerCoordinator(Protocol):
         renewed (e.g. it already expired or was superseded by another worker)."""
         ...
 
+    async def save_checkpoint(
+        self,
+        work: WorkItem,
+        stage: str,
+        payload: dict[str, Any],
+        now: datetime,
+    ) -> None:
+        """Persist an intermediate stage payload so a restarted worker can resume."""
+        ...
+
+    async def load_checkpoint(
+        self, work: WorkItem, stage: str
+    ) -> dict[str, Any] | None:
+        """Return a previously saved stage payload, or None if no checkpoint exists."""
+        ...
+
 
 class SqlWorkerCoordinator:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -109,6 +132,30 @@ class SqlWorkerCoordinator:
         async with self._session_factory.begin() as session:
             return await TaskRepository(session).renew_lease(
                 work.lease, now, lease_duration
+            )
+
+    async def save_checkpoint(
+        self,
+        work: WorkItem,
+        stage: str,
+        payload: dict[str, Any],
+        now: datetime,
+    ) -> None:
+        async with self._session_factory.begin() as session:
+            await TaskCheckpointRepository(session).save(
+                task_id=work.lease.task_id,
+                stage=stage,
+                payload=payload,
+                fence=work.lease.fence,
+                now=now,
+            )
+
+    async def load_checkpoint(
+        self, work: WorkItem, stage: str
+    ) -> dict[str, Any] | None:
+        async with self._session_factory.begin() as session:
+            return await TaskCheckpointRepository(session).load(
+                work.lease.task_id, stage
             )
 
     async def finalize(
@@ -232,9 +279,80 @@ class WorkerRunner:
         return asyncio.ensure_future(_loop())
 
     async def _analyze_full(self, work: WorkItem) -> AnalysisResult:
-        collection = await self._collect(work)
-        outcome, decision = await self._analyze(work, collection)
+        # Resume semantics: a restart re-claims the task with a higher fence.
+        # If the previous worker already saved a "collected" checkpoint, reuse
+        # it instead of redoing the (potentially expensive) platform calls; if
+        # it also saved a "decided" checkpoint, reuse that too. Missing stages
+        # fall through to live recomputation.
+        collection: WorkflowCollection | None = None
+        resumed_decision: DecisionResult | None = None
+        if work.lease.fence > 1:
+            collection = await self._load_collected_checkpoint(work)
+            if collection is not None:
+                LOGGER.info(
+                    "resume task=%s stage=collected (fence=%d)",
+                    work.lease.task_id,
+                    work.lease.fence,
+                )
+            resumed_decision = await self._load_decided_checkpoint(work)
+            if resumed_decision is not None:
+                LOGGER.info(
+                    "resume task=%s stage=decided (fence=%d)",
+                    work.lease.task_id,
+                    work.lease.fence,
+                )
+        if collection is None:
+            collection = await self._collect(work)
+            try:
+                await self._coordinator.save_checkpoint(
+                    work,
+                    STAGE_COLLECTED,
+                    _collection_payload(collection),
+                    self._now(),
+                )
+            except Exception as exc:
+                LOGGER.warning(
+                    "checkpoint_save_failed stage=collected task=%s error_type=%s",
+                    work.lease.task_id,
+                    type(exc).__name__,
+                )
+        outcome, decision = await self._analyze(
+            work, collection, prior_decision=resumed_decision
+        )
         return AnalysisResult(outcome=outcome, collection=collection, decision=decision)
+
+    async def _load_collected_checkpoint(
+        self, work: WorkItem
+    ) -> WorkflowCollection | None:
+        payload = await self._coordinator.load_checkpoint(work, STAGE_COLLECTED)
+        if payload is None:
+            return None
+        try:
+            return _collection_from_payload(payload)
+        except Exception as exc:
+            LOGGER.warning(
+                "checkpoint_invalid stage=collected task=%s error_type=%s",
+                work.lease.task_id,
+                type(exc).__name__,
+            )
+            return None
+
+    async def _load_decided_checkpoint(self, work: WorkItem) -> DecisionResult | None:
+        payload = await self._coordinator.load_checkpoint(work, STAGE_DECIDED)
+        if payload is None:
+            return None
+        try:
+            import json
+
+            canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            return DecisionResult.model_validate_json(canonical)
+        except Exception as exc:
+            LOGGER.warning(
+                "checkpoint_invalid stage=decided task=%s error_type=%s",
+                work.lease.task_id,
+                type(exc).__name__,
+            )
+            return None
 
     async def _collect(self, work: WorkItem) -> WorkflowCollection:
         return await self._workflow.collect(
@@ -250,6 +368,8 @@ class WorkerRunner:
         self,
         work: WorkItem,
         collection: WorkflowCollection,
+        *,
+        prior_decision: DecisionResult | None = None,
     ) -> tuple[ReportOutcome, DecisionResult | None]:
         current_evidence = tuple(
             item
@@ -257,9 +377,9 @@ class WorkerRunner:
             for item in result.evidence
             if item.kind is not EvidenceKind.HISTORICAL_CASE
         )
-        decision: DecisionResult | None = None
-        resolved_model = work.model_version
-        if current_evidence:
+        if prior_decision is not None and current_evidence:
+            decision = prior_decision
+        elif current_evidence:
             decision = await self._decision_port.decide(
                 _decision_request(
                     work,
@@ -267,7 +387,24 @@ class WorkerRunner:
                     synthetic=collection.context.case.synthetic,
                 )
             )
+        else:
+            decision = None
+        resolved_model = work.model_version
+        if decision is not None:
             resolved_model = decision.resolved_model
+            try:
+                await self._coordinator.save_checkpoint(
+                    work,
+                    STAGE_DECIDED,
+                    decision.model_dump(mode="json"),
+                    self._now(),
+                )
+            except Exception as exc:
+                LOGGER.warning(
+                    "checkpoint_save_failed stage=decided task=%s error_type=%s",
+                    work.lease.task_id,
+                    type(exc).__name__,
+                )
         outcome = compose_report(
             ReportInput(
                 task_id=work.lease.task_id,
@@ -385,4 +522,51 @@ def _decision_request(
         ),
         requested_model=work.model_version,
         question_set_version=QUESTION_SET_VERSION,
+    )
+
+
+def _collection_payload(collection: WorkflowCollection) -> dict[str, Any]:
+    """Serialize a WorkflowCollection into a JSON-safe dict for a checkpoint row.
+
+    CaseContext, ToolResult, and Evidence are all pydantic models, so
+    model_dump(mode="json") produces a fully JSON-safe payload.
+    """
+    return {
+        "context": collection.context.model_dump(mode="json"),
+        "results": [result.model_dump(mode="json") for result in collection.results],
+        "skipped_sources": list(collection.skipped_sources),
+    }
+
+
+def _collection_from_payload(payload: dict[str, Any]) -> WorkflowCollection:
+    """Reconstruct a WorkflowCollection from a saved checkpoint payload.
+
+    Domain models use strict validation, so model_validate on a JSON-dumped
+    dict rejects enum/str coercion. Serialize the payload back to a JSON
+    string and use model_validate_json (lax mode) which accepts it.
+    Raises on any schema mismatch so the caller can fall back to a fresh
+    collect rather than resume with corrupt data.
+    """
+    import json
+
+    from pe_agent.domain import CaseContext, ToolResult
+
+    raw_context = payload["context"]
+    raw_results = payload.get("results", [])
+    raw_skipped = payload.get("skipped_sources", [])
+
+    # Round-trip each sub-object through json so enum strings coerce back.
+    context = CaseContext.model_validate_json(
+        json.dumps(raw_context, sort_keys=True, separators=(",", ":"))
+    )
+    results: tuple[ToolResult[object], ...] = tuple(
+        ToolResult.model_validate_json(
+            json.dumps(item, sort_keys=True, separators=(",", ":"))
+        )
+        for item in raw_results
+    )
+    return WorkflowCollection(
+        context=context,
+        results=results,
+        skipped_sources=tuple(raw_skipped),
     )

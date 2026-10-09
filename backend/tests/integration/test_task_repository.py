@@ -23,14 +23,18 @@ from pe_agent.adapters.persistence.models import (
     ModelAssessmentModel,
     OutboxModel,
     ReportModel,
+    TaskCheckpointModel,
     TaskEventModel,
     ToolExecutionModel,
 )
 from pe_agent.adapters.persistence.repositories import (
+    STAGE_COLLECTED,
+    STAGE_DECIDED,
     NewTask,
     ReportRepository,
     ReviewRepository,
     ReviewValues,
+    TaskCheckpointRepository,
     TaskRepository,
 )
 from pe_agent.adapters.persistence.session import create_engine, create_session_factory
@@ -901,3 +905,67 @@ async def test_finalize_failed_task_persists_tool_executions_without_report(
             )
         )
         assert tool_count == 1
+
+
+# ------------------------------------------------------------------
+# Checkpoint persistence (resume)
+# ------------------------------------------------------------------
+
+
+async def test_checkpoint_upserts_same_task_stage_and_tracks_fence(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The same task+stage row is upserted; latest_fence reflects the newest write."""
+    payload_v1 = {"stage": "collected", "fence": 1, "n": 1}
+    payload_v2 = {"stage": "collected", "fence": 2, "n": 2}
+    now = datetime.now(UTC)
+
+    async with session_factory.begin() as session:
+        task = await create_task(session, task_id="ANA-CHECKPOINT")
+        repo = TaskCheckpointRepository(session)
+        await repo.save(
+            task_id=task.id, stage=STAGE_COLLECTED, payload=payload_v1, fence=1, now=now
+        )
+        await repo.save(
+            task_id=task.id, stage=STAGE_COLLECTED, payload=payload_v2, fence=2, now=now
+        )
+
+    async with session_factory.begin() as session:
+        rows = list(
+            await session.scalars(
+                select(TaskCheckpointModel).where(
+                    TaskCheckpointModel.task_id == "ANA-CHECKPOINT",
+                    TaskCheckpointModel.stage == STAGE_COLLECTED,
+                )
+            )
+        )
+        assert len(rows) == 1, "same task+stage must be upserted, not duplicated"
+        assert rows[0].fence == 2
+        loaded = await TaskCheckpointRepository(session).load("ANA-CHECKPOINT", STAGE_COLLECTED)
+        assert loaded == payload_v2
+        assert await TaskCheckpointRepository(session).latest_fence("ANA-CHECKPOINT") == 2
+
+
+async def test_checkpoint_stages_are_isolated_per_task(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A checkpoint on one task is not visible to another task; missing stage loads None."""
+    now = datetime.now(UTC)
+    async with session_factory.begin() as session:
+        task_a = await create_task(session, task_id="ANA-CK-A")
+        task_b = await create_task(session, task_id="ANA-CK-B")
+        repo = TaskCheckpointRepository(session)
+        await repo.save(
+            task_id=task_a.id,
+            stage=STAGE_DECIDED,
+            payload={"x": 1},
+            fence=1,
+            now=now,
+        )
+
+    async with session_factory.begin() as session:
+        repo = TaskCheckpointRepository(session)
+        assert await repo.load(task_a.id, STAGE_DECIDED) == {"x": 1}
+        assert await repo.load(task_b.id, STAGE_DECIDED) is None
+        assert await repo.load(task_a.id, STAGE_COLLECTED) is None
+        assert await repo.latest_fence(task_b.id) is None

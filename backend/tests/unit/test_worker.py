@@ -36,6 +36,9 @@ class FakeCoordinator:
         self.finalizations: list[tuple[WorkItem, ReportOutcome, datetime]] = []
         self.renewals: list[tuple[WorkItem, datetime, timedelta]] = []
         self.renew_fail_after: int | None = None
+        # Checkpoint store keyed by (task_id, stage) so resume logic can be
+        # exercised without a real database.
+        self.checkpoints: dict[tuple[str, str], dict[str, Any]] = {}
 
     async def claim(self, now: datetime, lease_duration: timedelta) -> WorkItem | None:
         self.claims.append((now, lease_duration))
@@ -59,6 +62,20 @@ class FakeCoordinator:
     ) -> bool:
         self.renewals.append((work, now, lease_duration))
         return self.renew_fail_after is None or len(self.renewals) < self.renew_fail_after
+
+    async def save_checkpoint(
+        self,
+        work: WorkItem,
+        stage: str,
+        payload: dict[str, Any],
+        now: datetime,
+    ) -> None:
+        self.checkpoints[(work.lease.task_id, stage)] = payload
+
+    async def load_checkpoint(
+        self, work: WorkItem, stage: str
+    ) -> dict[str, Any] | None:
+        return self.checkpoints.get((work.lease.task_id, stage))
 
 
 class CapturingDecisionPort:
@@ -401,3 +418,89 @@ async def test_lost_lease_does_not_crash_the_task() -> None:
     # Even though the lease was lost, the worker still attempts finalize
     # (the CAS in finalize will reject it if the lease truly lapsed).
     assert len(coordinator.finalizations) == 1
+
+
+# ------------------------------------------------------------------
+# Checkpoint resume
+# ------------------------------------------------------------------
+
+
+def _work_with_fence(
+    fence: int, scenario_name: str = "pressure-drift-success"
+) -> tuple[WorkItem, Any]:
+    """A WorkItem whose lease carries the given fence (resume = fence > 1)."""
+    work, scenario = _work(scenario_name)
+    resume_lease = Lease(
+        task_id=work.lease.task_id,
+        token=work.lease.token,
+        fence=fence,
+        deadline=work.lease.deadline,
+    )
+    resumed = WorkItem(
+        lease=resume_lease,
+        tenant_id=work.tenant_id,
+        user_id=work.user_id,
+        permissions=work.permissions,
+        authorized_entity_ids=work.authorized_entity_ids,
+        case_id=work.case_id,
+        case_version=work.case_version,
+        model_version=work.model_version,
+        schema_version=work.schema_version,
+    )
+    return resumed, scenario
+
+
+@pytest.mark.asyncio
+async def test_collected_checkpoint_is_saved_after_collect() -> None:
+    work, scenario = _work()
+    coordinator = FakeCoordinator(work)
+
+    await _runner(coordinator, scenario, CapturingDecisionPort()).run_once()
+
+    assert ("SYN-TASK-001", "collected") in coordinator.checkpoints
+    payload = coordinator.checkpoints[("SYN-TASK-001", "collected")]
+    assert payload["context"]["case"]["case_id"] == scenario.case.case_id
+    assert len(payload["results"]) == len(scenario.tool_results)
+    assert ("SYN-TASK-001", "decided") in coordinator.checkpoints
+
+
+@pytest.mark.asyncio
+async def test_resume_with_collected_checkpoint_skips_platform_calls() -> None:
+    """A fence-2 claim with a saved collected checkpoint must NOT re-call
+    the decision port's expensive path is reused for the decision stage,
+    but the collected checkpoint means the collect stage output is reused."""
+    # First run at fence=1 saves the checkpoints.
+    work1, scenario = _work()
+    coordinator1 = FakeCoordinator(work1)
+    await _runner(coordinator1, scenario, CapturingDecisionPort()).run_once()
+
+    # Second run at fence=2 with a decision port that would fail if called:
+    # if resume correctly reuses the collected + decided checkpoints, the
+    # decision port is never consulted.
+    work2, _ = _work_with_fence(2)
+    coordinator2 = FakeCoordinator(work2)
+    # Seed the resume run's checkpoint store from the first run's.
+    for key, payload in coordinator1.checkpoints.items():
+        coordinator2.checkpoints[(work2.lease.task_id, key[1])] = payload
+    failing = CapturingDecisionPort(
+        error=AssertionError("decision port must not be called on resume")
+    )
+
+    await _runner(coordinator2, scenario, failing).run_once()
+
+    # The reused decision came from the checkpoint, so no decide() call.
+    assert failing.requests == []
+    assert len(coordinator2.finalizations) == 1
+
+
+@pytest.mark.asyncio
+async def test_resume_falls_back_to_collect_when_checkpoint_missing() -> None:
+    """A fence-2 claim with no saved checkpoint must recompute everything."""
+    work, scenario = _work_with_fence(2)
+    coordinator = FakeCoordinator(work)
+    decision = CapturingDecisionPort()
+
+    await _runner(coordinator, scenario, decision).run_once()
+
+    # No checkpoints were seeded, so the live decision port was used.
+    assert len(decision.requests) == 1
